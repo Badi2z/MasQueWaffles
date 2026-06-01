@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>MasQueWaffles - Caja</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { background: #f5f2eb; margin: 0; padding: 16px; }
+        .app-container { max-width: 1400px; margin: 0 auto; }
+        h1 { font-size: 1.8rem; color: #b45f2b; display: flex; justify-content: space-between; flex-wrap: wrap; }
+        .main-layout { display: flex; flex-wrap: wrap; gap: 20px; }
+        .categorias-panel { flex: 2; min-width: 280px; background: white; border-radius: 28px; padding: 20px; }
+        .carrito-panel, .pedidos-panel { flex: 1.2; min-width: 280px; background: #fff8f0; border-radius: 28px; padding: 20px; margin-bottom: 20px; }
+        .pedidos-panel { background: #fff0e0; }
+        .categorias-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .cat-card { background: #ffedd5; border-radius: 24px; padding: 16px 8px; text-align: center; font-weight: bold; cursor: pointer; border: 2px solid #f7d9a8; transition: 0.05s linear; }
+        .cat-card:active { transform: scale(0.96); background: #fadc9f; }
+        .cat-emoji { font-size: 2.5rem; display: block; }
+        .submenu { background: #fef7e8; border-radius: 24px; padding: 16px; margin-top: 16px; border-left: 5px solid #ffb347; }
+        .submenu h3 { margin: 0 0 12px 0; display: flex; justify-content: space-between; }
+        .btn-cerrar { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #b45f2b; }
+        .items-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+        .item-boton { background: white; border: 1px solid #f0cf9b; border-radius: 60px; padding: 10px 18px; font-weight: bold; cursor: pointer; transition: 0.05s linear; }
+        .item-boton:active { transform: scale(0.96); background: #f7e2bf; }
+        .item-grande { background: #ffe1b3; }
+        .sabores-botones, .crepa-pasos { margin: 10px 0 0 20px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .sabor-btn, .paso-btn { background: #ffd966; border: none; border-radius: 40px; padding: 8px 16px; font-weight: bold; cursor: pointer; }
+        .paso-seleccionado { background: #4caf50; color: white; }
+        .nota-input { margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .nota-input input { flex: 1; padding: 8px 14px; border-radius: 40px; border: 1px solid #ccc; }
+        .carrito-item, .pedido-item { background: white; border-radius: 20px; padding: 12px; margin-bottom: 10px; transition: 0.2s; }
+        .pedido-item.listo { background: #b9f6ca; border: 2px solid #2e7d32; }
+        .carrito-nombre { font-weight: bold; }
+        .btn-eliminar { background: #ffc2c2; border: none; border-radius: 30px; padding: 4px 12px; cursor: pointer; }
+        .total { font-size: 1.8rem; font-weight: bold; text-align: right; border-top: 2px solid #ffb347; padding-top: 15px; margin: 15px 0; }
+        .nota-general-pedido textarea { width: 100%; border-radius: 20px; border: 1px solid #ffb347; padding: 10px; }
+        .btn-enviar, .btn-print, .btn-excel, .btn-cerrar-turno { width: 100%; padding: 12px; font-size: 1rem; font-weight: bold; border: none; border-radius: 60px; cursor: pointer; margin-bottom: 8px; }
+        .btn-enviar { background: #2b7a3e; color: white; }
+        .btn-print { background: #2196f3; color: white; }
+        .btn-excel { background: #1e6f5c; color: white; }
+        .btn-cerrar-turno { background: #c62828; color: white; }
+        .progress-bar { background: #ddd; border-radius: 20px; height: 8px; width: 100%; margin: 8px 0; }
+        .progress-fill { background: #4caf50; height: 8px; border-radius: 20px; }
+        .entregar-btn { background: #ff9800; border: none; border-radius: 20px; padding: 4px 12px; margin-top: 8px; cursor: pointer; }
+        footer { text-align: center; margin-top: 20px; color: gray; font-size: 0.8rem; }
+        @media (max-width: 780px) { .categorias-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); } }
+        @media print {
+            body * { visibility: hidden; }
+            .ticket-print, .ticket-print * { visibility: visible; }
+            .ticket-print { position: absolute; top: 0; left: 0; width: 80mm; padding: 10px; font-family: monospace; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <h1>🧇 MasQueWaffles · Caja <span id="fechaActual"></span></h1>
+    <div class="main-layout">
+        <div class="categorias-panel">
+            <div class="categorias-grid" id="categoriasGrid"></div>
+            <div id="submenuContainer"></div>
+        </div>
+        <div style="flex: 1.5;">
+            <div class="carrito-panel">
+                <h2>🛒 Pedido actual</h2>
+                <div id="carritoLista"></div>
+                <div class="total">Total: $<span id="totalPesos">0</span></div>
+                <textarea id="notaGeneralPedido" rows="2" placeholder="Nota general del pedido (ej. preparar a las 10:30)"></textarea>
+                <button class="btn-enviar" id="enviarCocinaBtn">📨 Enviar a cocina</button>
+                <button class="btn-print" id="printTicketBtn">🖨️ Imprimir ticket (actual)</button>
+                <button class="btn-excel" id="generarExcelBtn">📎 Excel del día</button>
+                <button class="btn-cerrar-turno" id="cerrarTurnoBtn">🔒 Cerrar turno (borrar pedidos)</button>
+            </div>
+            <div class="pedidos-panel">
+                <h2>📋 Pedidos en curso</h2>
+                <div id="pedidosActivosLista">Cargando...</div>
+            </div>
+        </div>
+    </div>
+    <footer>Presiona categoría → elige producto → envía a cocina</footer>
+</div>
+
+<script>
+    // ========== FIREBASE CONFIG ==========
+    const firebaseConfig = {
+        apiKey: "AIzaSyAtUbhUZW9qZlpueY3JrYXgnkcXfHYdUc0",
+        authDomain: "masquewaffles.firebaseapp.com",
+        projectId: "masquewaffles",
+        storageBucket: "masquewaffles.firebasestorage.app",
+        messagingSenderId: "444667770238",
+        appId: "1:444667770238:web:ce3c8ccb72b713be74af2f"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    let carrito = [];
+    let ultimosEstados = {};
+
+    // ========== SONIDO ==========
+    function playBeep() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.frequency.value = 880;
+            gainNode.gain.value = 0.3;
+            oscillator.start();
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.5);
+            oscillator.stop(audioCtx.currentTime + 0.5);
+        } catch(e) { console.log("Audio no soportado"); }
+    }
+
+    // ========== CATÁLOGO (igual que antes) ==========
+    async function inicializarCatalogo() {
+        const productosRef = db.collection("productos_v2");
+        const snapshot = await productosRef.get();
+        if (snapshot.empty) {
+            const dataInicial = { categorias: [
+                { nombre:"Alitas", emoji:"🍗", items:[
+                    { nombre:"Alitas BBQ", precio:67, emoji:"🔥", tipo:"normal" },
+                    { nombre:"Alitas Mango Habanero", precio:67, emoji:"🥭", tipo:"normal" },
+                    { nombre:"Alitas Habanero", precio:67, emoji:"🌶️", tipo:"normal" },
+                    { nombre:"Alitas Buffalo Clásica", precio:67, emoji:"🧀", tipo:"normal" },
+                    { nombre:"Alitas Buffalo Spicy", precio:67, emoji:"🌶️🧀", tipo:"normal" },
+                    { nombre:"Alitas GRANDES", precio:135, emoji:"🍗✨", tipo:"grandes_con_sabores", sabores:["BBQ","Mango Habanero","Habanero","Buffalo Clásica","Buffalo Spicy"] }
+                ]},
+                { nombre:"Boneless", emoji:"🍖", items:[
+                    { nombre:"Boneless BBQ", precio:73, emoji:"🔥", tipo:"normal" },
+                    { nombre:"Boneless Mango Habanero", precio:73, emoji:"🥭", tipo:"normal" },
+                    { nombre:"Boneless Habanero", precio:73, emoji:"🌶️", tipo:"normal" },
+                    { nombre:"Boneless Buffalo Clásica", precio:73, emoji:"🧀", tipo:"normal" },
+                    { nombre:"Boneless Buffalo Spicy", precio:73, emoji:"🌶️🧀", tipo:"normal" },
+                    { nombre:"Boneless GRANDES", precio:140, emoji:"🍖✨", tipo:"grandes_con_sabores", sabores:["BBQ","Mango Habanero","Habanero","Buffalo Clásica","Buffalo Spicy"] }
+                ]},
+                { nombre:"Hamburguesas", emoji:"🍔", items:[
+                    { nombre:"Clásica", precio:70 }, { nombre:"BBQ", precio:72 }, { nombre:"Hawaiana", precio:75 },
+                    { nombre:"Pollo", precio:70 }, { nombre:"Mango Habanero", precio:72 }, { nombre:"Buffalo", precio:72 },
+                    { nombre:"DE LA CASA", precio:78 }, { nombre:"COMPLETA", precio:75 }, { nombre:"DOBLE", precio:100 }
+                ].map(i=>({...i, emoji:"🍔", tipo:"normal"})) },
+                { nombre:"Hot Dogs", emoji:"🌭", items:[
+                    { nombre:"Sencilla", precio:25 }, { nombre:"Especial", precio:36 }, { nombre:"Ranchero", precio:36 }
+                ].map(i=>({...i, emoji:"🌭", tipo:"normal"})) },
+                { nombre:"Papas & Botanas", emoji:"🍟", items:[
+                    { nombre:"Papas Francesas", precio:42, emoji:"🍟" }, { nombre:"Salchipapas", precio:42, emoji:"🍟🍅" },
+                    { nombre:"Salchipulpos", precio:42, emoji:"🐙" }, { nombre:"Nuggets", precio:52, emoji:"🍗" },
+                    { nombre:"Palitos de queso", precio:50, emoji:"🧀" }, { nombre:"Aros de Cebolla", precio:36, emoji:"🧅" },
+                    { nombre:"Sincronizada", precio:40, emoji:"🌯" }
+                ] },
+                { nombre:"Crepas", emoji:"🥞", items:[
+                    { nombre:"Crepa Normal (armar)", precio:45, tipo:"crepa_normal", emoji:"🥞✨" },
+                    { nombre:"Crepa Especial", tipo:"crepas_especiales", emoji:"🍰", especiales:[
+                        { nombre:"Gansito", precio:65 }, { nombre:"Fresas con Crema", precio:65 },
+                        { nombre:"Ferrero Rocher", precio:70 }, { nombre:"Kinder Delice", precio:70 },
+                        { nombre:"Oreo", precio:60 }, { nombre:"Pay de limón", precio:65 }
+                    ]}
+                ] },
+                { nombre:"Bebidas", emoji:"🥤", items:[
+                    { nombre:"Frappés", tipo:"subcategoria", subitems:["Fresas con crema","Oreo","Algodón de Azúcar","Mazapán","Moka","Cafe","Choco Avellana"].map(s=>({nombre:`Frappé ${s}`, precio:48, emoji:"🥤"})) },
+                    { nombre:"Malteadas", tipo:"subcategoria", subitems:["Fresa","Chocolate","Vainilla"].map(s=>({nombre:`Malteada ${s}`, precio:48, emoji:"🥛"})) },
+                    { nombre:"Jelly Coffee", tipo:"subcategoria", subitems:["Oreo","Fresas con crema","Red Velvet","Mazapán","Coco","Choco Avellana"].map(s=>({nombre:`Jelly Coffee ${s}`, precio:60, emoji:"☕"})) },
+                    { nombre:"Soda Italiana", tipo:"subcategoria", subitems:["Mora azul","Manzana verde"].map(s=>({nombre:`Soda Italiana ${s}`, precio:40, emoji:"🍹"})) }
+                ] },
+                { nombre:"Sopas", emoji:"🍜", items:[
+                    { nombre:"Sopa Maruchan", precio:25, emoji:"🍜" }, { nombre:"Buldak/Ramen sencillo", precio:50, emoji:"🍜🔥" }
+                ] }
+            ] };
+            for (let cat of dataInicial.categorias) await productosRef.doc(cat.nombre).set(cat);
+        }
+        const snap = await productosRef.get();
+        let cats = []; snap.forEach(d=>cats.push(d.data()));
+        const orden = ["Alitas","Boneless","Hamburguesas","Hot Dogs","Papas & Botanas","Crepas","Bebidas","Sopas"];
+        cats.sort((a,b)=>orden.indexOf(a.nombre)-orden.indexOf(b.nombre));
+        return cats;
+    }
+
+    function renderCategorias(categorias) {
+        const grid = document.getElementById("categoriasGrid");
+        grid.innerHTML = "";
+        categorias.forEach(cat => {
+            const card = document.createElement("div");
+            card.className = "cat-card";
+            card.innerHTML = `<span class="cat-emoji">${cat.emoji || '🍽️'}</span><span>${cat.nombre}</span>`;
+            card.onclick = () => mostrarSubmenu(cat);
+            grid.appendChild(card);
+        });
+    }
+
+    let crepaSeleccion = { sabor: null, fruta: null, topping: null };
+
+    function mostrarSubmenu(categoria) {
+        const container = document.getElementById("submenuContainer");
+        let html = `<div class="submenu"><h3>${categoria.emoji} ${categoria.nombre} <button class="btn-cerrar" id="cerrarSubmenu">✖</button></h3><div class="items-grid">`;
+        for (let item of categoria.items) {
+            if (item.tipo === "subcategoria") {
+                html += `<div style="width:100%;"><strong>${item.nombre}</strong><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">`;
+                for (let sub of item.subitems) html += `<button class="item-boton" data-nombre="${sub.nombre}" data-precio="${sub.precio}">${sub.emoji} ${sub.nombre} $${sub.precio}</button>`;
+                html += `</div></div>`;
+            } else if (item.tipo === "grandes_con_sabores") {
+                html += `<div><button class="item-boton item-grande" data-grande="${item.nombre}" data-precio="${item.precio}" data-sabores='${JSON.stringify(item.sabores)}'>✨ ${item.emoji} ${item.nombre} $${item.precio} ✨</button>`;
+                html += `<div class="sabores-botones" id="sabores-${item.nombre.replace(/\s/g,'')}" style="display:none;">`;
+                for (let sabor of item.sabores) html += `<button class="sabor-btn" data-sabor="${sabor}" data-nombrebase="${item.nombre}" data-precio="${item.precio}">${sabor}</button>`;
+                html += `</div></div>`;
+            } else if (item.tipo === "crepa_normal") {
+                html += `<div><button class="item-boton" id="btnCrepaNormalPrincipal">🥞 ${item.nombre} - $${item.precio}</button>`;
+                html += `<div id="crepaPasosContainer" style="display:none; margin-top:12px;"></div></div>`;
+            } else if (item.tipo === "crepas_especiales") {
+                for (let esp of item.especiales) html += `<button class="item-boton" data-nombre="Crepa ${esp.nombre}" data-precio="${esp.precio}">🍰 Crepa ${esp.nombre} $${esp.precio}</button>`;
+            } else {
+                html += `<button class="item-boton" data-nombre="${item.nombre}" data-precio="${item.precio}">${item.emoji || '🍽️'} ${item.nombre} $${item.precio}</button>`;
+            }
+        }
+        html += `</div><div class="nota-input"><input type="text" id="notaProducto" placeholder="📝 Nota para este producto (ej. sin cebolla)"><button id="agregarConNota">➕ Agregar con nota</button></div></div>`;
+        container.innerHTML = html;
+
+        // Evento para crepa normal
+        const btnCrepa = document.getElementById("btnCrepaNormalPrincipal");
+        if (btnCrepa) {
+            btnCrepa.addEventListener("click", () => {
+                const contenedor = document.getElementById("crepaPasosContainer");
+                if (contenedor.style.display === "none") {
+                    crepaSeleccion = { sabor: null, fruta: null, topping: null };
+                    const sabores = ["Fresa", "Nutella", "Merm.Fresa", "Merm.Zarzamora", "Lechera", "Cajeta", "Philadelphia"];
+                    const frutas = ["Plátano", "Fresas", "Durazno", "Sin fruta"];
+                    const toppings = ["Nuez", "Chispas Chocolate", "Almendras", "Sin topping"];
+                    let pasosHtml = `<div style="background:#fff2e0; border-radius:20px; padding:12px;">
+                                        <div><strong>Paso 1: Sabor</strong><br>`;
+                    sabores.forEach(s => pasosHtml += `<button class="paso-btn" data-paso="sabor" data-valor="${s}">${s}</button> `);
+                    pasosHtml += `</div><div><strong>Paso 2: Fruta</strong><br>`;
+                    frutas.forEach(f => pasosHtml += `<button class="paso-btn" data-paso="fruta" data-valor="${f}">${f}</button> `);
+                    pasosHtml += `</div><div><strong>Paso 3: Topping</strong><br>`;
+                    toppings.forEach(t => pasosHtml += `<button class="paso-btn" data-paso="topping" data-valor="${t}">${t}</button> `);
+                    pasosHtml += `</div><div style="margin-top:12px;"><button id="confirmarCrepaBtn" style="background:#2b7a3e; color:white; border-radius:40px; padding:8px 20px;">✔️ Agregar Crepa</button></div></div>`;
+                    contenedor.innerHTML = pasosHtml;
+                    contenedor.style.display = "block";
+                    document.querySelectorAll(".paso-btn").forEach(btn => {
+                        btn.addEventListener("click", (e) => {
+                            const paso = btn.dataset.paso;
+                            const valor = btn.dataset.valor;
+                            crepaSeleccion[paso] = valor;
+                            document.querySelectorAll(`.paso-btn[data-paso="${paso}"]`).forEach(b => b.classList.remove("paso-seleccionado"));
+                            btn.classList.add("paso-seleccionado");
+                        });
+                    });
+                    document.getElementById("confirmarCrepaBtn").addEventListener("click", () => {
+                        if (!crepaSeleccion.sabor || !crepaSeleccion.fruta || !crepaSeleccion.topping) {
+                            alert("Selecciona sabor, fruta y topping");
+                            return;
+                        }
+                        const nombre = `🥞 Crepa (${crepaSeleccion.sabor}, ${crepaSeleccion.fruta}, ${crepaSeleccion.topping})`;
+                        const nota = document.getElementById("notaProducto").value;
+                        agregarAlCarrito(nombre, 45, nota);
+                        document.getElementById("notaProducto").value = "";
+                        contenedor.style.display = "none";
+                    });
+                } else {
+                    contenedor.style.display = "none";
+                }
+            });
+        }
+
+        // Grandes con sabores
+        document.querySelectorAll(".item-grande[data-grande]").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const nb = btn.dataset.grande;
+                const div = document.getElementById(`sabores-${nb.replace(/\s/g,'')}`);
+                if (div) div.style.display = div.style.display === "none" ? "flex" : "none";
+            });
+        });
+        document.querySelectorAll(".sabor-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const sabor = btn.dataset.sabor;
+                const nombreBase = btn.dataset.nombrebase;
+                const precio = parseFloat(btn.dataset.precio);
+                const nota = document.getElementById("notaProducto").value;
+                agregarAlCarrito(`${nombreBase} - ${sabor}`, precio, nota);
+                document.getElementById("notaProducto").value = "";
+                const parent = btn.closest('.sabores-botones');
+                if (parent) parent.style.display = "none";
+            });
+        });
+        document.querySelectorAll("#submenuContainer .item-boton[data-nombre]").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const nombre = btn.dataset.nombre;
+                const precio = parseFloat(btn.dataset.precio);
+                const nota = document.getElementById("notaProducto").value;
+                agregarAlCarrito(nombre, precio, nota);
+                document.getElementById("notaProducto").value = "";
+            });
+        });
+        document.getElementById("cerrarSubmenu")?.addEventListener("click", () => { container.innerHTML = ""; });
+    }
+
+    function agregarAlCarrito(nombre, precio, nota = "") {
+        carrito.push({ nombre, precio, nota });
+        renderCarrito();
+    }
+    function eliminarDelCarrito(idx) {
+        carrito.splice(idx, 1);
+        renderCarrito();
+    }
+    function renderCarrito() {
+        const cont = document.getElementById("carritoLista");
+        if (carrito.length === 0) {
+            cont.innerHTML = "<p>🛍️ Sin productos</p>";
+            document.getElementById("totalPesos").innerText = "0";
+            return;
+        }
+        let total = 0, html = "";
+        carrito.forEach((item, idx) => {
+            total += item.precio;
+            html += `<div class="carrito-item">
+                        <b>${item.nombre}</b> $${item.precio}
+                        ${item.nota ? `<div><small>📌 ${item.nota}</small></div>` : ""}
+                        <div><button class="btn-eliminar" data-idx="${idx}">❌ Eliminar</button></div>
+                    </div>`;
+        });
+        cont.innerHTML = html;
+        document.getElementById("totalPesos").innerText = total;
+        document.querySelectorAll(".btn-eliminar").forEach(btn => {
+            btn.addEventListener("click", () => eliminarDelCarrito(parseInt(btn.dataset.idx)));
+        });
+    }
+
+    async function enviarPedido() {
+        if (carrito.length === 0) { alert("No hay productos"); return; }
+        const total = carrito.reduce((s, i) => s + i.precio, 0);
+        const numeroPedido = Date.now().toString().slice(-6);
+        const notaGeneral = document.getElementById("notaGeneralPedido").value.trim();
+        const items = carrito.map(({nombre,precio,nota}) => ({nombre,precio,nota:nota||"", prepared: false}));
+        const pedido = {
+            numero: numeroPedido,
+            items: items,
+            total: total,
+            notaGeneral: notaGeneral,
+            fecha: new Date().toISOString(),
+            hora: new Date().toLocaleTimeString(),
+            estado: "pendiente"
+        };
+        await db.collection("pedidos").add(pedido);
+        alert(`✅ Pedido #${numeroPedido} enviado a cocina`);
+        carrito = [];
+        document.getElementById("notaGeneralPedido").value = "";
+        renderCarrito();
+    }
+
+    function imprimirTicket() {
+        if (carrito.length === 0) { alert("No hay productos"); return; }
+        const total = carrito.reduce((s,i)=>s+i.precio,0);
+        const fecha = new Date().toLocaleString();
+        let itemsHtml = "";
+        carrito.forEach(item => {
+            itemsHtml += `<div>${item.nombre} ................ $${item.precio}</div>`;
+            if (item.nota) itemsHtml += `<div style="font-size:0.8em;">📌 ${item.nota}</div>`;
+        });
+        const printContent = `<div class="ticket-print" style="width:80mm; font-family:monospace; padding:10px;">
+            <h2>🧇 MasQueWaffles</h2>
+            <p>${fecha}</p><hr>${itemsHtml}<hr><h3>TOTAL: $${total}</h3>
+            <p>¡Gracias por su compra!</p></div>`;
+        const ventana = window.open('', '_blank');
+        ventana.document.write(printContent);
+        ventana.document.close();
+        ventana.print();
+    }
+
+    async function generarExcelDiario() {
+        const hoy = new Date().toISOString().slice(0,10);
+        const snapshot = await db.collection("pedidos").where("fecha", ">=", hoy).get();
+        if (snapshot.empty) { alert("No hay pedidos hoy"); return; }
+        let ventas = [];
+        snapshot.forEach(doc => {
+            const p = doc.data();
+            p.items.forEach(item => {
+                ventas.push({
+                    "Nro Pedido": p.numero,
+                    "Producto": item.nombre,
+                    "Precio": item.precio,
+                    "Nota Producto": item.nota || "",
+                    "Nota General Pedido": p.notaGeneral || "",
+                    "Hora": p.hora,
+                    "Fecha": p.fecha
+                });
+            });
+        });
+        let csv = "Nro Pedido,Producto,Precio,Nota Producto,Nota General Pedido,Hora,Fecha\n";
+        ventas.forEach(v => { csv += `"${v["Nro Pedido"]}","${v.Producto}",${v.Precio},"${v["Nota Producto"]}","${v["Nota General Pedido"]}","${v.Hora}","${v.Fecha}"\n`; });
+        const blob = new Blob([csv], {type:"text/csv"});
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `ventas_${hoy}.csv`;
+        link.click();
+        alert("CSV descargado");
+    }
+
+    // ========== NUEVA FUNCIÓN: CERRAR TURNO ==========
+    async function cerrarTurno() {
+        // Confirmación
+        if (!confirm("⚠️ ¿Cerrar turno? Se descargará el Excel del día y se BORRARÁN TODOS los pedidos de la base de datos. Asegúrate de tener respaldo. ¿Continuar?")) {
+            return;
+        }
+        
+        // Mostrar mensaje de carga
+        const btn = document.getElementById("cerrarTurnoBtn");
+        const textoOriginal = btn.innerText;
+        btn.innerText = "⏳ Descargando Excel...";
+        btn.disabled = true;
+        
+        try {
+            // 1. Generar Excel del día (usando la misma función)
+            await generarExcelDiario(); // esperamos a que termine la descarga (no es realmente asíncrona, pero damos tiempo)
+            
+            // Pequeña pausa para asegurar la descarga
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            btn.innerText = "🗑️ Borrando pedidos...";
+            
+            // 2. Borrar TODOS los pedidos de la colección "pedidos"
+            const pedidosSnapshot = await db.collection("pedidos").get();
+            if (pedidosSnapshot.empty) {
+                alert("No hay pedidos para borrar.");
+            } else {
+                const batch = db.batch();
+                pedidosSnapshot.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+                alert(`✅ Se eliminaron ${pedidosSnapshot.size} pedidos.`);
+            }
+            
+            // 3. Recargar la página para limpiar el estado local
+            alert("Turno cerrado. La página se recargará para empezar de nuevo.");
+            window.location.reload();
+            
+        } catch (error) {
+            console.error("Error al cerrar turno:", error);
+            alert("❌ Ocurrió un error al cerrar el turno. Revisa la consola.");
+        } finally {
+            btn.innerText = textoOriginal;
+            btn.disabled = false;
+        }
+    }
+
+    function cargarPedidosActivos() {
+        db.collection("pedidos").where("estado", "in", ["pendiente", "preparando", "listo"]).orderBy("fecha", "desc").onSnapshot(snapshot => {
+            const container = document.getElementById("pedidosActivosLista");
+            if (snapshot.empty) { container.innerHTML = "<p>No hay pedidos en curso</p>"; return; }
+            let html = "";
+            snapshot.forEach(doc => {
+                const p = doc.data();
+                const totalItems = p.items.length;
+                const preparedCount = p.items.filter(i => i.prepared === true).length;
+                const porcentaje = (preparedCount / totalItems) * 100;
+                let estadoTexto = "", claseListo = "";
+                if (p.estado === "pendiente") estadoTexto = "⏳ Pendiente";
+                else if (p.estado === "preparando") estadoTexto = "👨‍🍳 En preparación";
+                else if (p.estado === "listo") {
+                    estadoTexto = "✅ LISTO PARA ENTREGAR";
+                    claseListo = "listo";
+                    if (ultimosEstados[doc.id] !== "listo") {
+                        playBeep();
+                        ultimosEstados[doc.id] = "listo";
+                    }
+                } else {
+                    ultimosEstados[doc.id] = p.estado;
+                }
+                html += `<div class="pedido-item ${claseListo}">
+                            <b>Pedido #${p.numero}</b> - ${p.hora}
+                            <div class="progress-bar"><div class="progress-fill" style="width: ${porcentaje}%;"></div></div>
+                            <div>${preparedCount}/${totalItems} productos listos</div>
+                            <div>${estadoTexto}</div>`;
+                if (preparedCount === totalItems && p.estado !== "listo") {
+                    html += `<button class="entregar-btn" data-id="${doc.id}">✅ Marcar como listo</button>`;
+                } else if (p.estado === "listo") {
+                    html += `<button class="entregar-btn" data-id="${doc.id}">📦 Entregado (finalizar)</button>`;
+                }
+                html += `</div>`;
+            });
+            container.innerHTML = html;
+            document.querySelectorAll(".entregar-btn").forEach(btn => {
+                btn.addEventListener("click", async (e) => {
+                    const id = btn.dataset.id;
+                    const pedidoRef = db.collection("pedidos").doc(id);
+                    const docSnap = await pedidoRef.get();
+                    const data = docSnap.data();
+                    const allPrepared = data.items.every(i => i.prepared === true);
+                    if (allPrepared && data.estado !== "listo") {
+                        await pedidoRef.update({ estado: "listo" });
+                        alert("Pedido listo para entregar");
+                    } else if (data.estado === "listo") {
+                        await pedidoRef.update({ estado: "entregado" });
+                        alert("Pedido entregado");
+                    }
+                });
+            });
+        });
+    }
+
+    document.getElementById("fechaActual").innerText = new Date().toLocaleDateString();
+    document.getElementById("enviarCocinaBtn").onclick = enviarPedido;
+    document.getElementById("printTicketBtn").onclick = imprimirTicket;
+    document.getElementById("generarExcelBtn").onclick = generarExcelDiario;
+    document.getElementById("cerrarTurnoBtn").onclick = cerrarTurno;
+    inicializarCatalogo().then(cats => renderCategorias(cats));
+    cargarPedidosActivos();
+</script>
+</body>
+</html>
