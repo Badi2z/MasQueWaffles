@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>MasQueWaffles - COCINA</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <style>
+        body { background: #2d2f36; color: white; font-family: system-ui; padding: 20px; margin: 0; }
+        .container { max-width: 1300px; margin: 0 auto; }
+        h1 { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .pedido { background: #3b3e47; border-radius: 20px; padding: 20px; margin: 20px 0; border-left: 10px solid #ffb347; transition: 0.2s; }
+        .pedido.listo { background: #2e7d32; border-left-color: #ffd966; }
+        .producto-card { background: #2a2c33; border-radius: 20px; padding: 15px; margin: 12px 0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+        .producto-info { flex: 2; }
+        .producto-nombre { font-size: 1.2rem; font-weight: bold; }
+        .producto-ingredientes { font-size: 0.85rem; color: #ffd966; margin-top: 6px; white-space: pre-line; }
+        .producto-nota { font-size: 0.8rem; color: #ffab62; margin-top: 4px; }
+        .btn-estado { background: #ff9800; border: none; color: white; padding: 12px 24px; border-radius: 60px; font-size: 1rem; font-weight: bold; cursor: pointer; min-width: 110px; transition: 0.1s; }
+        .btn-estado:active { transform: scale(0.96); }
+        .btn-estado.listo { background: #4caf50; }
+        .btn-estado.pendiente { background: #f44336; }
+        .nota-general { background: #2a2c33; padding: 10px 15px; border-radius: 16px; margin: 12px 0; border-left: 4px solid #ff9800; }
+        .btn-group { margin-top: 15px; display: flex; gap: 12px; flex-wrap: wrap; }
+        button { background: #4caf50; border: none; color: white; padding: 10px 20px; border-radius: 40px; cursor: pointer; font-weight: bold; font-size: 1rem; }
+        .btn-print { background: #2196f3; }
+        .btn-print-all { background: #ff9800; }
+        .badge-pagado { background: #4caf50; color: white; border-radius: 30px; padding: 4px 12px; font-size: 0.7rem; display: inline-block; margin-left: 10px; }
+        hr { border-color: #555; }
+        @media print {
+            .no-print { display: none; }
+            .pedido { break-inside: avoid; background: white; color: black; border: 1px solid #ccc; }
+            .btn-estado, .btn-group { display: none; }
+        }
+        @media (max-width: 700px) {
+            .producto-card { flex-direction: column; align-items: stretch; }
+            .btn-estado { width: 100%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>👨‍🍳 COCINA - MasQueWaffles 🧇
+        <button id="printAllBtn" class="btn-print-all">🖨️ Imprimir todas las comandas</button>
+    </h1>
+    <div id="pedidosContainer">Cargando pedidos...</div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyAtUbhUZW9qZlpueY3JrYXgnkcXfHYdUc0",
+        authDomain: "masquewaffles.firebaseapp.com",
+        projectId: "masquewaffles",
+        storageBucket: "masquewaffles.firebasestorage.app",
+        messagingSenderId: "444667770238",
+        appId: "1:444667770238:web:ce3c8ccb72b713be74af2f"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    function playBeep() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.frequency.value = 880;
+            gainNode.gain.value = 0.3;
+            oscillator.start();
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.5);
+            oscillator.stop(audioCtx.currentTime + 0.5);
+        } catch(e) { console.log("Audio no soportado"); }
+    }
+
+    let ultimosEstados = {};
+
+    const ingredientesMap = {
+        "Alitas BBQ": "Plato hamburguesero, 5 PIEZAS de alas Medianas/grandes, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Alitas Mango Habanero": "Plato hamburguesero, 5 PIEZAS de alas Medianas/grandes, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Alitas Habanero": "Plato hamburguesero, 5 PIEZAS de alas Medianas/grandes, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Alitas Buffalo Clásica": "Plato hamburguesero, 5 PIEZAS de alas Medianas/grandes, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Alitas Buffalo Spicy": "Plato hamburguesero, 5 PIEZAS de alas Medianas/grandes, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Alitas GRANDES - BBQ": "Plato grande, 12 PIEZAS de alitas MEDIANAS/CHICAS, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Alitas GRANDES - Mango Habanero": "Plato grande, 12 PIEZAS de alitas MEDIANAS/CHICAS, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Alitas GRANDES - Habanero": "Plato grande, 12 PIEZAS de alitas MEDIANAS/CHICAS, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Alitas GRANDES - Buffalo Clásica": "Plato grande, 12 PIEZAS de alitas MEDIANAS/CHICAS, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Alitas GRANDES - Buffalo Spicy": "Plato grande, 12 PIEZAS de alitas MEDIANAS/CHICAS, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Boneless BBQ": "Plato Hamburguesero, 200 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Boneless Mango Habanero": "Plato Hamburguesero, 200 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Boneless Habanero": "Plato Hamburguesero, 200 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Boneless Buffalo Clásica": "Plato Hamburguesero, 200 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Boneless Buffalo Spicy": "Plato Hamburguesero, 200 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Boneless GRANDES - BBQ": "Plato GRANDE, 400 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Boneless GRANDES - Mango Habanero": "Plato GRANDE, 400 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Boneless GRANDES - Habanero": "Plato GRANDE, 400 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Boneless GRANDES - Buffalo Clásica": "Plato GRANDE, 400 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Boneless GRANDES - Buffalo Spicy": "Plato GRANDE, 400 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon",
+        "Hamburguesa Clásica": "Pan, carne de res, lechuga, tomate, cebolla, mayonesa, catsup",
+        "Hamburguesa BBQ": "Clásica + salsa BBQ",
+        "Hamburguesa Hawaiana": "Clásica + piña",
+        "Hamburguesa de Pollo": "Pan, pechuga de pollo empanizada, lechuga, tomate, mayonesa",
+        "Hamburguesa Mango Habanero": "Pollo + salsa mango habanero",
+        "Hamburguesa Buffalo": "Pollo + salsa buffalo",
+        "Hamburguesa DE LA CASA": "Doble carne, queso amarillo, tocino, lechuga, tomate, cebolla caramelizada, salsa especial",
+        "Hamburguesa COMPLETA": "Clásica + jamón, queso, huevo",
+        "Hamburguesa DOBLE": "Dos carnes, queso, lechuga, tomate, cebolla, salsa",
+        "Hot Dog Sencilla": "Plato cuadrado , Pan de hotdog, 1 salchicha, 1 jamon, crema, mayonesa, queso amarillo, picadillo de chile, picadillo de jitomate, cátchup",
+        "Hot Dog Especial": "Plato cuadrado , Pan de hotdog, 1 salchicha + ½ media de salchicha cortada a lo largo , 1 jamon, 1 tocino, queso Oaxaca, crema, mayonesa, queso amarillo, cátchup",
+        "Hot Dog Ranchero": "Plato cuadrado, Pan de hotdog, 1 salchicha, 1 jalapeño cortado a la mitad (retirar venas), 1 jamon, 1 tocino, queso Oaxaca, mayonesa, queso amarillo, cátchup",
+        "Papas Francesas": "Plato hamburguesero, 270 gramos de papas, cátsup, queso amarillo, crema, valentina",
+        "Salchipapas": "Plato hamburguesero, 230 gramos de papas, 2 salchichas cortadas en rebanadas, cátsup, queso amarillo, crema, valentina",
+        "Salchipulpos": "Plato hamburguesero, 5 salchichas cortadas a la mitad de tal manera que queden 10 cilindros, hacer corte de cruz en forma de patitas de pulpo en los 10 cilindros",
+        "Nuggets": "Plato hamburguesero, 5 Nuguetes de pollo, 100g de papa y aderezo o salsas",
+        "Palitos de queso": "Plato hamburguesero, 5 palitos de queso, 2 trozos de pepino, 2 trozos de zanahoria y aderezo vasito. O salsas",
+        "Aros de Cebolla": "Plato Hamburguesero, 5 aros de cebolla, crema, cátsup y salsa",
+        "Sincronizada": "2 tortillas de harina, plato plano cuadrado, queso Oaxaca, 2 jamones, 100 g de papas",
+        "Sopa Maruchan": "Tenedor, ½ limon, maruchan y agua caliente",
+        "Buldak/Ramen sencillo": "Leche, queso oaxaca, agua hervida, buldak con salsas y saborizantes",
+        "Crepa Gansito": "1 gansito chico, crepa base, crema batida, chocolate",
+        "Crepa Fresas con Crema": "Crepa con fresas, crema batida y lechera",
+        "Crepa Ferrero Rocher": "1 Frerrero rocher, Nutella, crepa base",
+        "Crepa Kinder Delice": "1 kinder delice, crepa base",
+        "Crepa Oreo": "galletas oreo trituradas, crema batida",
+        "Crepa Pay de limón": "Crepa con relleno de limón y merengue",
+        "Frappé Oreo": "1 vaso de hielo y leche lleno a ras, 4 galletas de oreo, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso",
+        "Frappé Mazapán": "1 vaso de hielo y leche lleno a ras, 3 mazapanes chicos o 2 grandes, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso",
+        "Frappé Moka": "1 vaso de hielo y leche lleno a ras, 1 cucharada de café y combinar con azucar, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso. Y amargo dulce",
+        "Frappé Fresas con crema": "1 vaso de hielo y leche lleno a ras, 40 gramos de saborizante de fresas con crema, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso",
+        "Frappé Algodón de Azúcar": "1 vaso de hielo y leche lleno a ras, 40 gramos de saborizante de algodón de azucar, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso",
+        "Frappé Choco Avellana": "1 vaso de hielo y leche lleno a ras, 40 gramos de saborizante de choco avellana, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso",
+        "Frappé Cafe": "1 vaso de hielo y leche lleno a ras, café al gusto, 1 cucharada de base, licuar",
+        "Malteada Fresa": "En un vaso pesar 90 gramos de helado de fresa y agregar leche dentro del vaso, posteriormente, meter todo a licuadora y agregar 1 cucharada de base y licuar durante 4 minutos a velocidad baja",
+        "Malteada Vainilla": "En un vaso pesar 90 gramos de helado de vainilla y agregar leche dentro del vaso, posteriormente, meter todo a licuadora y agregar 1 cucharada de base y licuar durante 4 minutos a velocidad baja",
+        "Malteada Chocolate": "En un vaso pesar 90 gramos de helado de chocolate y agregar leche dentro del vaso, posteriormente, meter todo a licuadora y agregar 1 cucharada de base y licuar durante 4 minutos a velocidad baja",
+        "Jelly Coffee Oreo": "Café, leche, gelatina de café, galletas Oreo.",
+        "Jelly Coffee Fresas con crema": "Café, leche, gelatina de café, saborizante de fresas con crema",
+        "Jelly Coffee Red Velvet": "Café, leche, gelatina, sabor red velvet",
+        "Jelly Coffee Mazapán": "Café, leche, gelatina, mazapán",
+        "Jelly Coffee Coco": "Café, leche, gelatina, sabor coco",
+        "Jelly Coffee Choco Avellana": "Café, leche, gelatina, choco avellana",
+        "Soda Italiana Mora azul": "Agua mineral, jarabe de mora azul, hielo",
+        "Soda Italiana Manzana verde": "Agua mineral, jarabe de manzana verde, hielo"
+    };
+
+    function obtenerIngredientesCrepaNormal(nombreProducto) {
+        const match = nombreProducto.match(/🥞 Crepa \(([^,]+), ([^,]+), ([^)]+)\)/);
+        if (!match) return "No se pudo parsear la crepa normal.";
+        const sabor = match[1].trim();
+        const fruta = match[2].trim();
+        const topping = match[3].trim();
+        let frutaTexto = "";
+        if (fruta === "Fresas") frutaTexto = "2 a 3 fresas medianas cortadas en rebanadas";
+        else if (fruta === "Plátano") frutaTexto = "½ plátano cortada en rebanadas";
+        else if (fruta === "Durazno") frutaTexto = "1 durazno cortado en rebanadas";
+        else if (fruta === "Sin fruta") frutaTexto = "Sin fruta agregada";
+        else frutaTexto = `${fruta} (cantidad estándar)`;
+        let toppingTexto = "";
+        if (topping === "Nuez") toppingTexto = "Espolvorear nuez dentro o fuera";
+        else if (topping === "Chispas Chocolate") toppingTexto = "Espolvorear chispas de chocolate dentro o fuera";
+        else if (topping === "Almendras") toppingTexto = "Espolvorear almendras dentro o fuera";
+        else if (topping === "Sin topping") toppingTexto = "Sin topping";
+        else toppingTexto = `${topping} (espolvorear al gusto)`;
+        return `Base: Masa de crepa\nIngrediente (${sabor}): Encima de la tortilla de ${sabor}\nIngrediente (${fruta}): ${frutaTexto}\nIngrediente (${topping}): ${toppingTexto}`;
+    }
+
+    function obtenerIngredientes(nombreProducto) {
+        if (nombreProducto.includes("🥞 Crepa (") || nombreProducto.includes("Crepa (")) {
+            return obtenerIngredientesCrepaNormal(nombreProducto);
+        }
+        if (ingredientesMap[nombreProducto]) return ingredientesMap[nombreProducto];
+        return `No se encontraron ingredientes específicos para "${nombreProducto}". Consultar receta base.`;
+    }
+
+    function renderPedidos() {
+        db.collection("pedidos").where("estado", "in", ["pendiente", "preparando", "listo"]).orderBy("fecha", "desc").onSnapshot(snapshot => {
+            const container = document.getElementById("pedidosContainer");
+            if (snapshot.empty) { container.innerHTML = "<p>✅ No hay pedidos activos</p>"; return; }
+            let html = "";
+            snapshot.forEach(doc => {
+                const p = doc.data();
+                const allPrepared = p.items.every(i => i.prepared === true);
+                let estadoBadge = "", claseListo = "";
+                if (p.estado === "pendiente") estadoBadge = "🟡 Pendiente";
+                else if (p.estado === "preparando") estadoBadge = "🔵 En preparación";
+                else if (p.estado === "listo") {
+                    estadoBadge = "🟢 LISTO PARA ENTREGAR";
+                    claseListo = "listo";
+                    if (ultimosEstados[doc.id] !== "listo") { playBeep(); ultimosEstados[doc.id] = "listo"; }
+                }
+                const pagadoBadge = p.pagado ? '<span class="badge-pagado">💰 Pagado</span>' : '<span class="badge-pagado" style="background:#ff9800;">💵 Pendiente pago</span>';
+                html += `<div class="pedido ${claseListo}" data-id="${doc.id}">
+                            <h3>🍽️ Pedido #${p.numero}  |  Total: $${p.total}  |  Hora: ${p.hora}  |  ${estadoBadge} ${pagadoBadge}</h3>`;
+                if (p.notaGeneral) html += `<div class="nota-general">📝 NOTA GENERAL: ${p.notaGeneral}</div>`;
+                html += `<div class="items">`;
+                p.items.forEach((item, idx) => {
+                    const estadoActual = item.prepared ? "listo" : "pendiente";
+                    const btnTexto = item.prepared ? "✅ Listo" : "⏳ No listo";
+                    const ingredientes = obtenerIngredientes(item.nombre);
+                    const ingredientesHTML = ingredientes.replace(/\n/g, '<br>');
+                    html += `<div class="producto-card">
+                                <div class="producto-info">
+                                    <div class="producto-nombre">${item.nombre} - $${item.precio}</div>
+                                    <div class="producto-ingredientes">📋 ${ingredientesHTML}</div>
+                                    ${item.nota ? `<div class="producto-nota">📌 Nota: ${item.nota}</div>` : ""}
+                                </div>
+                                <button class="btn-estado ${estadoActual}" data-pedido-id="${doc.id}" data-item-idx="${idx}">${btnTexto}</button>
+                            </div>`;
+                });
+                html += `</div><div class="btn-group">`;
+                if (allPrepared && p.estado !== "listo") {
+                    html += `<button class="marcar-listo-btn" data-id="${doc.id}">✅ Marcar todo como listo</button>`;
+                }
+                html += `<button class="print-order-btn" data-id="${doc.id}" data-numero="${p.numero}">🖨️ Imprimir comanda</button>`;
+                html += `</div></div>`;
+            });
+            container.innerHTML = html;
+
+            document.querySelectorAll(".btn-estado").forEach(btn => {
+                btn.addEventListener("click", async (e) => {
+                    const pedidoId = btn.dataset.pedidoId;
+                    const itemIdx = parseInt(btn.dataset.itemIdx);
+                    const pedidoRef = db.collection("pedidos").doc(pedidoId);
+                    const docSnap = await pedidoRef.get();
+                    const items = docSnap.data().items;
+                    items[itemIdx].prepared = !items[itemIdx].prepared;
+                    let newEstado = docSnap.data().estado;
+                    if (newEstado === "pendiente" && items.some(i => i.prepared)) newEstado = "preparando";
+                    await pedidoRef.update({ items: items, estado: newEstado });
+                });
+            });
+            document.querySelectorAll(".marcar-listo-btn").forEach(btn => {
+                btn.addEventListener("click", async (e) => {
+                    const id = btn.dataset.id;
+                    const pedidoRef = db.collection("pedidos").doc(id);
+                    const docSnap = await pedidoRef.get();
+                    const items = docSnap.data().items.map(i => ({...i, prepared: true}));
+                    await pedidoRef.update({ items: items, estado: "listo" });
+                    alert("Pedido marcado como listo");
+                });
+            });
+            document.querySelectorAll(".print-order-btn").forEach(btn => {
+                btn.addEventListener("click", async () => {
+                    const id = btn.dataset.id;
+                    const numero = btn.dataset.numero;
+                    const doc = await db.collection("pedidos").doc(id).get();
+                    const p = doc.data();
+                    let itemsHtml = "";
+                    p.items.forEach(item => {
+                        const ing = obtenerIngredientes(item.nombre);
+                        itemsHtml += `<div><strong>${item.nombre}</strong> - $${item.precio}</div>
+                                      <div style="font-size:0.8rem;">📋 ${ing.replace(/\n/g, '<br>')}</div>`;
+                        if (item.nota) itemsHtml += `<div style="font-size:0.8rem;">📌 Nota: ${item.nota}</div>`;
+                        itemsHtml += `<hr>`;
+                    });
+                    const printWindow = window.open('', '_blank');
+                    printWindow.document.write(`
+                        <html><head><title>Comanda #${numero}</title>
+                        <style>body { font-family: monospace; width: 80mm; margin: 0 auto; padding: 10px; }</style>
+                        </head><body>
+                        <h2>🧇 MasQueWaffles</h2>
+                        <p>Pedido #${numero} - ${p.hora}</p>
+                        <hr>
+                        ${itemsHtml}
+                        <p>Nota general: ${p.notaGeneral || "Ninguna"}</p>
+                        <p>¡Gracias!</p>
+                        </body></html>
+                    `);
+                    printWindow.document.close();
+                    printWindow.print();
+                });
+            });
+        });
+    }
+
+    document.getElementById("printAllBtn").addEventListener("click", () => {
+        const pedidos = document.querySelectorAll(".pedido");
+        if (pedidos.length === 0) return alert("No hay pedidos");
+        let allHtml = "";
+        pedidos.forEach(ped => { allHtml += ped.outerHTML; });
+        const ventana = window.open('', '_blank');
+        ventana.document.write(`<html><head><title>Comandas</title><style>body { font-family: monospace; } .pedido { margin-bottom: 20px; break-after: page; } .btn-estado, .btn-group { display: none; }</style></head><body>${allHtml}</body></html>`);
+        ventana.document.close();
+        ventana.print();
+    });
+
+    renderPedidos();
+</script>
+</body>
+</html>

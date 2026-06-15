@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>MasQueWaffles - Caja</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, 'Poppins', sans-serif; }
+        body { background: linear-gradient(135deg, #f5f2eb 0%, #f8e8d0 100%); margin: 0; padding: 16px; min-height: 100vh; }
+        .app-container { max-width: 1500px; margin: 0 auto; }
+        h1 { font-size: 2rem; background: linear-gradient(45deg, #b45f2b, #e6893e); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .main-layout { display: flex; flex-wrap: wrap; gap: 24px; }
+        .categorias-panel, .carrito-panel, .pedidos-panel { background: rgba(255,255,240,0.95); backdrop-filter: blur(2px); border-radius: 32px; padding: 20px; box-shadow: 0 12px 28px rgba(0,0,0,0.1); border: 1px solid rgba(255,200,150,0.5); }
+        .categorias-panel { flex: 2; min-width: 280px; }
+        .carrito-panel, .pedidos-panel { flex: 1.2; min-width: 300px; margin-bottom: 0; }
+        .pedidos-panel { background: #fff8e8; }
+        .categorias-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 16px; margin-bottom: 30px; }
+        .cat-card { background: linear-gradient(145deg, #ffffff, #fff3e0); border-radius: 28px; padding: 18px 8px; text-align: center; font-weight: bold; font-size: 1.1rem; cursor: pointer; border: none; box-shadow: 0 6px 12px rgba(0,0,0,0.05); transition: 0.1s; color: #5a3e2b; }
+        .cat-card:active { transform: scale(0.96); background: #ffefcf; }
+        .cat-emoji { font-size: 2.8rem; display: block; margin-bottom: 8px; }
+        .submenu { background: #fff8ed; border-radius: 28px; padding: 20px; margin-top: 20px; border-left: 6px solid #ff9800; }
+        .items-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; max-height: 400px; overflow-y: auto; padding: 4px; }
+        .item-boton { background: white; border: 1px solid #ffe0b5; border-radius: 80px; padding: 12px 24px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: all 0.1s; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); color: #4a2c1a; }
+        .item-boton:active { transform: scale(0.96); background: #ffe2b5; }
+        .item-grande { background: #ffe0b5; border: 1px solid #ffb347; }
+        .sabores-botones, .crepa-pasos { margin: 10px 0 0 20px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .sabor-btn, .paso-btn { background: #ffd966; border: none; border-radius: 60px; padding: 10px 20px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.05s; color: #3e2a1f; }
+        .paso-seleccionado { background: #4caf50; color: white; }
+        .nota-input { margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap; }
+        .nota-input input { flex: 1; padding: 12px 16px; border-radius: 60px; border: 1px solid #ffcc88; background: #fffcf5; font-size: 1rem; }
+        .carrito-item, .pedido-item, .entregado-item { background: white; border-radius: 24px; padding: 14px; margin-bottom: 12px; transition: 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .pedido-item.listo { background: #c8e6c9; border-left: 6px solid #2e7d32; }
+        .pedido-item.pagado { border-left: 6px solid #4caf50; background: #e8f5e9; }
+        .entregado-item { background: #e9e9e9; opacity: 0.8; }
+        .btn-eliminar { background: #ffcdd2; border: none; border-radius: 40px; padding: 6px 16px; cursor: pointer; font-weight: bold; color: #b71c1c; }
+        .total { font-size: 2rem; font-weight: bold; text-align: right; border-top: 2px solid #ffb347; padding-top: 15px; margin: 15px 0; color: #e67e22; }
+        .nota-general-pedido textarea { width: 100%; border-radius: 24px; border: 1px solid #ffb882; background: #fffaf2; padding: 12px; font-size: 1rem; }
+        .btn-enviar, .btn-print, .btn-excel, .btn-cerrar-turno { width: 100%; padding: 14px; font-size: 1.1rem; font-weight: bold; border: none; border-radius: 60px; cursor: pointer; margin-bottom: 12px; transition: 0.1s; }
+        .btn-enviar { background: #2e7d32; color: white; box-shadow: 0 4px 8px rgba(46,125,50,0.3); }
+        .btn-print { background: #1976d2; color: white; }
+        .btn-excel { background: #00695c; color: white; }
+        .btn-cerrar-turno { background: #c62828; color: white; }
+        .progress-bar { background: #e0e0e0; border-radius: 20px; height: 10px; width: 100%; margin: 8px 0; }
+        .progress-fill { background: #4caf50; height: 10px; border-radius: 20px; }
+        .entregar-btn, .pagar-btn { background: #ff9800; border: none; border-radius: 40px; padding: 8px 16px; margin-top: 8px; cursor: pointer; font-weight: bold; margin-right: 8px; }
+        .pagar-btn { background: #4caf50; color: white; }
+        .toggle-historial { background: #8d6e63; color: white; border: none; border-radius: 40px; padding: 8px 12px; margin-bottom: 12px; cursor: pointer; width: 100%; font-weight: bold; }
+        footer { text-align: center; margin-top: 30px; color: #8d6e63; font-weight: 500; }
+        .badge-pagado { background: #4caf50; color: white; border-radius: 30px; padding: 4px 12px; font-size: 0.7rem; display: inline-block; margin-left: 10px; }
+        @media (max-width: 780px) {
+            .categorias-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+            .item-boton { padding: 10px 16px; font-size: 0.9rem; }
+        }
+        @media print {
+            body * { visibility: hidden; }
+            .ticket-print, .ticket-print * { visibility: visible; }
+            .ticket-print { position: absolute; top: 0; left: 0; width: 80mm; padding: 10px; font-family: monospace; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <h1>🧇 MasQueWaffles · Caja ✨ <span id="fechaActual"></span></h1>
+    <div class="main-layout">
+        <div class="categorias-panel">
+            <div class="categorias-grid" id="categoriasGrid"></div>
+            <div id="submenuContainer"></div>
+        </div>
+        <div style="flex: 1.5;">
+            <div class="carrito-panel">
+                <h2>🛒 Pedido actual 🧾</h2>
+                <div id="carritoLista"></div>
+                <div class="total">Total: $<span id="totalPesos">0</span></div>
+                <textarea id="notaGeneralPedido" rows="2" placeholder="Nota general del pedido (ej. preparar a las 10:30)"></textarea>
+                <button class="btn-enviar" id="enviarCocinaBtn">📨 Enviar a cocina</button>
+                <button class="btn-print" id="printTicketBtn">🖨️ Imprimir ticket (actual)</button>
+                <button class="btn-excel" id="generarExcelBtn">📎 Excel del día</button>
+                <button class="btn-cerrar-turno" id="cerrarTurnoBtn">🔒 Cerrar turno (borrar pedidos)</button>
+            </div>
+            <div class="pedidos-panel">
+                <h2>📋 Pedidos en curso</h2>
+                <div id="pedidosActivosLista">Cargando...</div>
+                <button id="toggleHistorialBtn" class="toggle-historial">📜 Mostrar pedidos entregados</button>
+                <div id="historialEntregados" style="display: none;">
+                    <h3>📦 Entregados (este turno)</h3>
+                    <div id="entregadosLista"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>🍟 Selecciona categoría → elige producto → envía a cocina 🧇</footer>
+</div>
+
+<script>
+    // ========== FIREBASE ==========
+    const firebaseConfig = {
+        apiKey: "AIzaSyAtUbhUZW9qZlpueY3JrYXgnkcXfHYdUc0",
+        authDomain: "masquewaffles.firebaseapp.com",
+        projectId: "masquewaffles",
+        storageBucket: "masquewaffles.firebasestorage.app",
+        messagingSenderId: "444667770238",
+        appId: "1:444667770238:web:ce3c8ccb72b713be74af2f"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    let carrito = [];
+    let ultimosEstados = {};
+    let pedidosEntregadosLocal = [];
+
+    function playBeep() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.frequency.value = 880;
+            gainNode.gain.value = 0.3;
+            oscillator.start();
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.5);
+            oscillator.stop(audioCtx.currentTime + 0.5);
+        } catch(e) { console.log("Audio no soportado"); }
+    }
+
+    async function getNextPedidoNumber() {
+        const counterRef = db.collection("config").doc("contador_pedido");
+        return db.runTransaction(async (transaction) => {
+            const doc = await transaction.get(counterRef);
+            let current = doc.exists ? doc.data().ultimoNumero : 0;
+            let next = current + 1;
+            transaction.set(counterRef, { ultimoNumero: next });
+            return next;
+        });
+    }
+
+    async function resetearContadorPedidos() {
+        await db.collection("config").doc("contador_pedido").set({ ultimoNumero: 0 });
+    }
+
+    // ========== CATÁLOGO COMPLETO ==========
+    async function inicializarCatalogo() {
+        const productosRef = db.collection("productos_v2");
+        const snapshot = await productosRef.get();
+        if (snapshot.empty) {
+            const dataInicial = { categorias: [
+                { nombre:"Alitas", emoji:"🍗", items:[
+                    { nombre:"Alitas BBQ", precio:67, emoji:"🔥", tipo:"normal" },
+                    { nombre:"Alitas Mango Habanero", precio:67, emoji:"🥭", tipo:"normal" },
+                    { nombre:"Alitas Habanero", precio:67, emoji:"🌶️", tipo:"normal" },
+                    { nombre:"Alitas Buffalo Clásica", precio:67, emoji:"🧀", tipo:"normal" },
+                    { nombre:"Alitas Buffalo Spicy", precio:67, emoji:"🌶️🧀", tipo:"normal" },
+                    { nombre:"Alitas GRANDES", precio:135, emoji:"🍗✨", tipo:"grandes_con_sabores", sabores:["BBQ","Mango Habanero","Habanero","Buffalo Clásica","Buffalo Spicy"] }
+                ]},
+                { nombre:"Boneless", emoji:"🍖", items:[
+                    { nombre:"Boneless BBQ", precio:73, emoji:"🔥", tipo:"normal" },
+                    { nombre:"Boneless Mango Habanero", precio:73, emoji:"🥭", tipo:"normal" },
+                    { nombre:"Boneless Habanero", precio:73, emoji:"🌶️", tipo:"normal" },
+                    { nombre:"Boneless Buffalo Clásica", precio:73, emoji:"🧀", tipo:"normal" },
+                    { nombre:"Boneless Buffalo Spicy", precio:73, emoji:"🌶️🧀", tipo:"normal" },
+                    { nombre:"Boneless GRANDES", precio:140, emoji:"🍖✨", tipo:"grandes_con_sabores", sabores:["BBQ","Mango Habanero","Habanero","Buffalo Clásica","Buffalo Spicy"] }
+                ]},
+                { nombre:"Hamburguesas", emoji:"🍔", items:[
+                    { nombre:"Hamburguesa Clásica", precio:70 },
+                    { nombre:"Hamburguesa BBQ", precio:72 },
+                    { nombre:"Hamburguesa Hawaiana", precio:75 },
+                    { nombre:"Hamburguesa de Pollo", precio:70 },
+                    { nombre:"Hamburguesa Mango Habanero", precio:72 },
+                    { nombre:"Hamburguesa Buffalo", precio:72 },
+                    { nombre:"Hamburguesa DE LA CASA", precio:78 },
+                    { nombre:"Hamburguesa COMPLETA", precio:75 },
+                    { nombre:"Hamburguesa DOBLE", precio:100 }
+                ].map(i=>({...i, emoji:"🍔", tipo:"normal"})) },
+                { nombre:"Hot Dogs", emoji:"🌭", items:[
+                    { nombre:"Hot Dog Sencilla", precio:25 },
+                    { nombre:"Hot Dog Especial", precio:36 },
+                    { nombre:"Hot Dog Ranchero", precio:36 }
+                ].map(i=>({...i, emoji:"🌭", tipo:"normal"})) },
+                { nombre:"Papas & Botanas", emoji:"🍟", items:[
+                    { nombre:"Papas Francesas", precio:42, emoji:"🍟" },
+                    { nombre:"Salchipapas", precio:42, emoji:"🍟🍅" },
+                    { nombre:"Salchipulpos", precio:42, emoji:"🐙" },
+                    { nombre:"Nuggets", precio:52, emoji:"🍗" },
+                    { nombre:"Palitos de queso", precio:50, emoji:"🧀" },
+                    { nombre:"Aros de Cebolla", precio:36, emoji:"🧅" },
+                    { nombre:"Sincronizada", precio:40, emoji:"🌯" }
+                ] },
+                { nombre:"Crepas", emoji:"🥞", items:[
+                    { nombre:"Crepa Normal (armar)", precio:45, tipo:"crepa_normal", emoji:"🥞✨" },
+                    { nombre:"Crepa Especial", tipo:"crepas_especiales", emoji:"🍰", especiales:[
+                        { nombre:"Gansito", precio:65 }, { nombre:"Fresas con Crema", precio:65 },
+                        { nombre:"Ferrero Rocher", precio:70 }, { nombre:"Kinder Delice", precio:70 },
+                        { nombre:"Oreo", precio:60 }, { nombre:"Pay de limón", precio:65 }
+                    ]}
+                ] },
+                { nombre:"Bebidas", emoji:"🥤", items:[
+                    { nombre:"Frappés", tipo:"subcategoria", subitems:["Fresas con crema","Oreo","Algodón de Azúcar","Mazapán","Moka","Cafe","Choco Avellana"].map(s=>({nombre:`Frappé ${s}`, precio:48, emoji:"🥤"})) },
+                    { nombre:"Malteadas", tipo:"subcategoria", subitems:["Fresa","Chocolate","Vainilla"].map(s=>({nombre:`Malteada ${s}`, precio:48, emoji:"🥛"})) },
+                    { nombre:"Jelly Coffee", tipo:"subcategoria", subitems:["Oreo","Fresas con crema","Red Velvet","Mazapán","Coco","Choco Avellana"].map(s=>({nombre:`Jelly Coffee ${s}`, precio:60, emoji:"☕"})) },
+                    { nombre:"Soda Italiana", tipo:"subcategoria", subitems:["Mora azul","Manzana verde"].map(s=>({nombre:`Soda Italiana ${s}`, precio:40, emoji:"🍹"})) }
+                ] },
+                { nombre:"Sopas", emoji:"🍜", items:[
+                    { nombre:"Sopa Maruchan", precio:25, emoji:"🍜" },
+                    { nombre:"Buldak/Ramen sencillo", precio:50, emoji:"🍜🔥" }
+                ] }
+            ] };
+            for (let cat of dataInicial.categorias) await productosRef.doc(cat.nombre).set(cat);
+        }
+        const snap = await productosRef.get();
+        let cats = []; snap.forEach(d=>cats.push(d.data()));
+        const orden = ["Alitas","Boneless","Hamburguesas","Hot Dogs","Papas & Botanas","Crepas","Bebidas","Sopas"];
+        cats.sort((a,b)=>orden.indexOf(a.nombre)-orden.indexOf(b.nombre));
+        return cats;
+    }
+
+    function renderCategorias(categorias) {
+        const grid = document.getElementById("categoriasGrid");
+        grid.innerHTML = "";
+        categorias.forEach(cat => {
+            const card = document.createElement("div");
+            card.className = "cat-card";
+            card.innerHTML = `<span class="cat-emoji">${cat.emoji || '🍽️'}</span><span>${cat.nombre}</span>`;
+            card.onclick = () => mostrarSubmenu(cat);
+            grid.appendChild(card);
+        });
+    }
+
+    let crepaSeleccion = { sabor: null, fruta: null, topping: null };
+
+    function mostrarSubmenu(categoria) {
+        const container = document.getElementById("submenuContainer");
+        let html = `<div class="submenu"><h3>${categoria.emoji} ${categoria.nombre} <button class="btn-cerrar" id="cerrarSubmenu">✖</button></h3><div class="items-grid">`;
+        for (let item of categoria.items) {
+            if (item.tipo === "subcategoria") {
+                html += `<div style="width:100%; margin-bottom:10px;"><strong style="font-size:1.1rem;">${item.nombre}</strong><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">`;
+                for (let sub of item.subitems) html += `<button class="item-boton" data-nombre="${sub.nombre}" data-precio="${sub.precio}">${sub.emoji} ${sub.nombre}<br><span style="font-size:0.8rem;">$${sub.precio}</span></button>`;
+                html += `</div></div>`;
+            } else if (item.tipo === "grandes_con_sabores") {
+                html += `<div><button class="item-boton item-grande" style="background:#ffd280;" data-grande="${item.nombre}" data-precio="${item.precio}" data-sabores='${JSON.stringify(item.sabores)}'>✨ ${item.emoji} ${item.nombre}<br><span style="font-size:0.8rem;">$${item.precio}</span> ✨</button>`;
+                html += `<div class="sabores-botones" id="sabores-${item.nombre.replace(/\s/g,'')}" style="display:none;">`;
+                for (let sabor of item.sabores) html += `<button class="sabor-btn" data-sabor="${sabor}" data-nombrebase="${item.nombre}" data-precio="${item.precio}">${sabor}</button>`;
+                html += `</div></div>`;
+            } else if (item.tipo === "crepa_normal") {
+                html += `<div><button class="item-boton" id="btnCrepaNormalPrincipal" style="background:#ffe0b5;">🥞 ${item.nombre}<br><span style="font-size:0.8rem;">$${item.precio}</span></button>`;
+                html += `<div id="crepaPasosContainer" style="display:none; margin-top:12px;"></div></div>`;
+            } else if (item.tipo === "crepas_especiales") {
+                html += `<div style="width:100%;"><strong style="font-size:1.1rem;">Crepas Especiales</strong><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">`;
+                for (let esp of item.especiales) html += `<button class="item-boton" data-nombre="Crepa ${esp.nombre}" data-precio="${esp.precio}">🍰 Crepa ${esp.nombre}<br><span style="font-size:0.8rem;">$${esp.precio}</span></button>`;
+                html += `</div></div>`;
+            } else {
+                html += `<button class="item-boton" data-nombre="${item.nombre}" data-precio="${item.precio}">${item.emoji || '🍽️'} ${item.nombre}<br><span style="font-size:0.8rem;">$${item.precio}</span></button>`;
+            }
+        }
+        html += `</div><div class="nota-input"><input type="text" id="notaProducto" placeholder="📝 Nota para este producto (ej. sin cebolla)"><button id="agregarConNota" style="background:#ffb347; border:none; border-radius:40px; padding:10px 16px;">➕ Agregar</button></div></div>`;
+        container.innerHTML = html;
+
+        const btnCrepa = document.getElementById("btnCrepaNormalPrincipal");
+        if (btnCrepa) {
+            btnCrepa.addEventListener("click", () => {
+                const contenedor = document.getElementById("crepaPasosContainer");
+                if (contenedor.style.display === "none") {
+                    crepaSeleccion = { sabor: null, fruta: null, topping: null };
+                    const sabores = ["Fresa", "Nutella", "Merm.Fresa", "Merm.Zarzamora", "Lechera", "Cajeta", "Philadelphia"];
+                    const frutas = ["Plátano", "Fresas", "Durazno", "Sin fruta"];
+                    const toppings = ["Nuez", "Chispas Chocolate", "Almendras", "Sin topping"];
+                    let pasosHtml = `<div style="background:#fff2e0; border-radius:20px; padding:12px;">
+                                        <div><strong>Paso 1: Sabor</strong><br>`;
+                    sabores.forEach(s => pasosHtml += `<button class="paso-btn" data-paso="sabor" data-valor="${s}">${s}</button> `);
+                    pasosHtml += `</div><div><strong>Paso 2: Fruta</strong><br>`;
+                    frutas.forEach(f => pasosHtml += `<button class="paso-btn" data-paso="fruta" data-valor="${f}">${f}</button> `);
+                    pasosHtml += `</div><div><strong>Paso 3: Topping</strong><br>`;
+                    toppings.forEach(t => pasosHtml += `<button class="paso-btn" data-paso="topping" data-valor="${t}">${t}</button> `);
+                    pasosHtml += `</div><div style="margin-top:12px;"><button id="confirmarCrepaBtn" style="background:#2b7a3e; color:white; border-radius:40px; padding:8px 20px;">✔️ Agregar Crepa</button></div></div>`;
+                    contenedor.innerHTML = pasosHtml;
+                    contenedor.style.display = "block";
+                    document.querySelectorAll(".paso-btn").forEach(btn => {
+                        btn.addEventListener("click", (e) => {
+                            const paso = btn.dataset.paso;
+                            const valor = btn.dataset.valor;
+                            crepaSeleccion[paso] = valor;
+                            document.querySelectorAll(`.paso-btn[data-paso="${paso}"]`).forEach(b => b.classList.remove("paso-seleccionado"));
+                            btn.classList.add("paso-seleccionado");
+                        });
+                    });
+                    document.getElementById("confirmarCrepaBtn").addEventListener("click", () => {
+                        if (!crepaSeleccion.sabor || !crepaSeleccion.fruta || !crepaSeleccion.topping) {
+                            alert("Selecciona sabor, fruta y topping");
+                            return;
+                        }
+                        const nombre = `🥞 Crepa (${crepaSeleccion.sabor}, ${crepaSeleccion.fruta}, ${crepaSeleccion.topping})`;
+                        const nota = document.getElementById("notaProducto").value;
+                        agregarAlCarrito(nombre, 45, nota);
+                        document.getElementById("notaProducto").value = "";
+                        contenedor.style.display = "none";
+                    });
+                } else {
+                    contenedor.style.display = "none";
+                }
+            });
+        }
+
+        document.querySelectorAll(".item-grande[data-grande]").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const nb = btn.dataset.grande;
+                const div = document.getElementById(`sabores-${nb.replace(/\s/g,'')}`);
+                if (div) div.style.display = div.style.display === "none" ? "flex" : "none";
+            });
+        });
+        document.querySelectorAll(".sabor-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const sabor = btn.dataset.sabor;
+                const nombreBase = btn.dataset.nombrebase;
+                const precio = parseFloat(btn.dataset.precio);
+                const nota = document.getElementById("notaProducto").value;
+                agregarAlCarrito(`${nombreBase} - ${sabor}`, precio, nota);
+                document.getElementById("notaProducto").value = "";
+                const parent = btn.closest('.sabores-botones');
+                if (parent) parent.style.display = "none";
+            });
+        });
+        document.querySelectorAll("#submenuContainer .item-boton[data-nombre]").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const nombre = btn.dataset.nombre;
+                const precio = parseFloat(btn.dataset.precio);
+                const nota = document.getElementById("notaProducto").value;
+                agregarAlCarrito(nombre, precio, nota);
+                document.getElementById("notaProducto").value = "";
+            });
+        });
+        document.getElementById("cerrarSubmenu")?.addEventListener("click", () => { container.innerHTML = ""; });
+    }
+
+    function agregarAlCarrito(nombre, precio, nota = "") {
+        carrito.push({ nombre, precio, nota });
+        renderCarrito();
+    }
+
+    function eliminarDelCarrito(idx) {
+        carrito.splice(idx, 1);
+        renderCarrito();
+    }
+
+    function renderCarrito() {
+        const cont = document.getElementById("carritoLista");
+        if (carrito.length === 0) {
+            cont.innerHTML = "<p>🛍️ Sin productos</p>";
+            document.getElementById("totalPesos").innerText = "0";
+            return;
+        }
+        let total = 0, html = "";
+        carrito.forEach((item, idx) => {
+            total += item.precio;
+            html += `<div class="carrito-item">
+                        <b>${item.nombre}</b> $${item.precio}
+                        ${item.nota ? `<div><small>📌 ${item.nota}</small></div>` : ""}
+                        <div><button class="btn-eliminar" data-idx="${idx}">❌ Eliminar</button></div>
+                    </div>`;
+        });
+        cont.innerHTML = html;
+        document.getElementById("totalPesos").innerText = total;
+        document.querySelectorAll(".btn-eliminar").forEach(btn => {
+            btn.addEventListener("click", () => eliminarDelCarrito(parseInt(btn.dataset.idx)));
+        });
+    }
+
+    async function enviarPedido() {
+        if (carrito.length === 0) { alert("No hay productos"); return; }
+        const total = carrito.reduce((s, i) => s + i.precio, 0);
+        const numeroPedido = await getNextPedidoNumber();
+        const notaGeneral = document.getElementById("notaGeneralPedido").value.trim();
+        const items = carrito.map(({nombre,precio,nota}) => ({nombre,precio,nota:nota||"", prepared: false}));
+        const pedido = {
+            numero: numeroPedido,
+            items: items,
+            total: total,
+            notaGeneral: notaGeneral,
+            fecha: new Date().toISOString(),
+            hora: new Date().toLocaleTimeString(),
+            estado: "pendiente",
+            pagado: false
+        };
+        await db.collection("pedidos").add(pedido);
+        alert(`✅ Pedido #${numeroPedido} enviado a cocina`);
+        carrito = [];
+        document.getElementById("notaGeneralPedido").value = "";
+        renderCarrito();
+    }
+
+    function imprimirTicket() {
+        if (carrito.length === 0) { alert("No hay productos"); return; }
+        const total = carrito.reduce((s,i)=>s+i.precio,0);
+        const fecha = new Date().toLocaleString();
+        let itemsHtml = "";
+        carrito.forEach(item => {
+            itemsHtml += `<div>${item.nombre} ................ $${item.precio}</div>`;
+            if (item.nota) itemsHtml += `<div style="font-size:0.8em;">📌 ${item.nota}</div>`;
+        });
+        const printContent = `<div class="ticket-print" style="width:80mm; font-family:monospace; padding:10px;">
+            <h2>🧇 MasQueWaffles</h2>
+            <p>${fecha}</p><hr>${itemsHtml}<hr><h3>TOTAL: $${total}</h3>
+            <p>¡Gracias por su compra!</p></div>`;
+        const ventana = window.open('', '_blank');
+        ventana.document.write(printContent);
+        ventana.document.close();
+        ventana.print();
+    }
+
+    async function generarExcelDiario() {
+        const hoy = new Date().toISOString().slice(0,10);
+        const snapshot = await db.collection("pedidos").where("fecha", ">=", hoy).get();
+        if (snapshot.empty) { alert("No hay pedidos hoy"); return; }
+        let ventas = [];
+        snapshot.forEach(doc => {
+            const p = doc.data();
+            p.items.forEach(item => {
+                ventas.push({
+                    "Nro Pedido": p.numero,
+                    "Producto": item.nombre,
+                    "Precio": item.precio,
+                    "Nota Producto": item.nota || "",
+                    "Nota General Pedido": p.notaGeneral || "",
+                    "Hora": p.hora,
+                    "Fecha": p.fecha,
+                    "Pagado": p.pagado ? "Sí" : "No"
+                });
+            });
+        });
+        let csv = "Nro Pedido,Producto,Precio,Nota Producto,Nota General Pedido,Hora,Fecha,Pagado\n";
+        ventas.forEach(v => { csv += `"${v["Nro Pedido"]}","${v.Producto}",${v.Precio},"${v["Nota Producto"]}","${v["Nota General Pedido"]}","${v.Hora}","${v.Fecha}","${v.Pagado}"\n`; });
+        const blob = new Blob([csv], {type:"text/csv"});
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `ventas_${hoy}.csv`;
+        link.click();
+        alert("CSV descargado");
+    }
+
+    async function cerrarTurno() {
+        if (!confirm("⚠️ ¿Cerrar turno? Se descargará el Excel del día y se BORRARÁN TODOS los pedidos de la base de datos. ¿Continuar?")) return;
+        const btn = document.getElementById("cerrarTurnoBtn");
+        const textoOriginal = btn.innerText;
+        btn.innerText = "⏳ Procesando...";
+        btn.disabled = true;
+        try {
+            await generarExcelDiario();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const pedidosSnapshot = await db.collection("pedidos").get();
+            if (!pedidosSnapshot.empty) {
+                const batch = db.batch();
+                pedidosSnapshot.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+                alert(`✅ Se eliminaron ${pedidosSnapshot.size} pedidos.`);
+            }
+            await resetearContadorPedidos();
+            pedidosEntregadosLocal = [];
+            document.getElementById("entregadosLista").innerHTML = "";
+            alert("Turno cerrado. El contador de pedidos se reinició. La página se recargará.");
+            window.location.reload();
+        } catch (error) {
+            console.error(error);
+            alert("❌ Error al cerrar turno.");
+        } finally {
+            btn.innerText = textoOriginal;
+            btn.disabled = false;
+        }
+    }
+
+    function cargarPedidosActivos() {
+        db.collection("pedidos").where("estado", "in", ["pendiente", "preparando", "listo"]).orderBy("fecha", "desc").onSnapshot(snapshot => {
+            const container = document.getElementById("pedidosActivosLista");
+            if (snapshot.empty) { container.innerHTML = "<p>✨ No hay pedidos en curso ✨</p>"; return; }
+            let html = "";
+            snapshot.forEach(doc => {
+                const p = doc.data();
+                const totalItems = p.items.length;
+                const preparedCount = p.items.filter(i => i.prepared === true).length;
+                const porcentaje = (preparedCount / totalItems) * 100;
+                let estadoTexto = "", claseListo = "";
+                if (p.estado === "pendiente") estadoTexto = "⏳ Pendiente";
+                else if (p.estado === "preparando") estadoTexto = "👨‍🍳 En preparación";
+                else if (p.estado === "listo") {
+                    estadoTexto = "✅ LISTO PARA ENTREGAR";
+                    claseListo = "listo";
+                    if (ultimosEstados[doc.id] !== "listo") { playBeep(); ultimosEstados[doc.id] = "listo"; }
+                }
+                const pagadoBadge = p.pagado ? '<span class="badge-pagado">💰 Pagado</span>' : '<span class="badge-pagado" style="background:#ff9800;">💵 Pendiente pago</span>';
+                html += `<div class="pedido-item ${claseListo}" data-id="${doc.id}">
+                            <b>Pedido #${p.numero}</b> - ${p.hora} ${pagadoBadge}
+                            <div class="progress-bar"><div class="progress-fill" style="width: ${porcentaje}%;"></div></div>
+                            <div>${preparedCount}/${totalItems} productos listos</div>
+                            <div>${estadoTexto}</div>
+                            <div style="margin-top: 8px; font-size: 0.9rem;">`;
+                p.items.forEach(item => {
+                    const estadoIcon = item.prepared ? "✅" : "⏳";
+                    html += `<div>${estadoIcon} ${item.nombre} - $${item.precio} ${item.nota ? `<small>(📌 ${item.nota})</small>` : ""}</div>`;
+                });
+                html += `</div>`;
+                if (!p.pagado) {
+                    html += `<button class="pagar-btn" data-id="${doc.id}">💵 Marcar como pagado</button>`;
+                }
+                if (preparedCount === totalItems && p.estado !== "listo") {
+                    html += `<button class="entregar-btn" data-id="${doc.id}">✅ Marcar como listo</button>`;
+                } else if (p.estado === "listo") {
+                    html += `<button class="entregar-btn" data-id="${doc.id}">📦 Entregado (finalizar)</button>`;
+                }
+                html += `</div>`;
+            });
+            container.innerHTML = html;
+            document.querySelectorAll(".pagar-btn").forEach(btn => {
+                btn.addEventListener("click", async (e) => {
+                    const id = btn.dataset.id;
+                    await db.collection("pedidos").doc(id).update({ pagado: true });
+                    alert("Pedido marcado como pagado");
+                });
+            });
+            document.querySelectorAll(".entregar-btn").forEach(btn => {
+                btn.addEventListener("click", async (e) => {
+                    const id = btn.dataset.id;
+                    const pedidoRef = db.collection("pedidos").doc(id);
+                    const docSnap = await pedidoRef.get();
+                    const data = docSnap.data();
+                    const allPrepared = data.items.every(i => i.prepared === true);
+                    if (allPrepared && data.estado !== "listo") {
+                        await pedidoRef.update({ estado: "listo" });
+                        alert("Pedido listo para entregar");
+                    } else if (data.estado === "listo") {
+                        if (!data.pagado) await pedidoRef.update({ pagado: true, estado: "entregado" });
+                        else await pedidoRef.update({ estado: "entregado" });
+                        pedidosEntregadosLocal.push({ ...data, entregadoHora: new Date().toLocaleTimeString(), pagado: true });
+                        actualizarHistorialEntregados();
+                        alert("Pedido entregado y registrado como pagado");
+                    }
+                });
+            });
+        });
+    }
+
+    function actualizarHistorialEntregados() {
+        const cont = document.getElementById("entregadosLista");
+        if (pedidosEntregadosLocal.length === 0) {
+            cont.innerHTML = "<p>No hay pedidos entregados en este turno</p>";
+            return;
+        }
+        let html = "";
+        pedidosEntregadosLocal.forEach(p => {
+            html += `<div class="entregado-item">
+                        <b>Pedido #${p.numero}</b> - ${p.hora} (entregado ${p.entregadoHora})<br>
+                        Total: $${p.total}<br>
+                        ${p.items.map(i => `${i.nombre} x1`).join(", ")}
+                    </div>`;
+        });
+        cont.innerHTML = html;
+    }
+
+    document.getElementById("toggleHistorialBtn").addEventListener("click", () => {
+        const div = document.getElementById("historialEntregados");
+        div.style.display = div.style.display === "none" ? "block" : "none";
+        if (div.style.display === "block") actualizarHistorialEntregados();
+    });
+
+    document.getElementById("fechaActual").innerText = new Date().toLocaleDateString();
+    document.getElementById("enviarCocinaBtn").onclick = enviarPedido;
+    document.getElementById("printTicketBtn").onclick = imprimirTicket;
+    document.getElementById("generarExcelBtn").onclick = generarExcelDiario;
+    document.getElementById("cerrarTurnoBtn").onclick = cerrarTurno;
+    inicializarCatalogo().then(cats => renderCategorias(cats));
+    cargarPedidosActivos();
+</script>
+</body>
+</html>
