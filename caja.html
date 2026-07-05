@@ -376,19 +376,19 @@
   // ================================================================
   // RENDERIZAR CATEGORÍAS CON IMÁGENES Y BORDES
   // ================================================================
-  function renderCategorias() {
-    categoriasGrid.innerHTML = '';
-    categorias.forEach(cat => {
-      const card = document.createElement('div');
-      card.className = 'cat-card';
-      card.innerHTML = `
-        <img src="imagenes/${cat.id}.png" alt="${cat.nombre}" loading="lazy">
-        <span class="nombre">${cat.nombre}</span>
-      `;
-      card.addEventListener('click', () => abrirModalCategoria(cat));
-      categoriasGrid.appendChild(card);
-    });
-  }
+ function renderCategorias() {
+  categoriasGrid.innerHTML = '';
+  categorias.forEach(cat => {
+    const card = document.createElement('div');
+    card.className = 'cat-card';
+    card.innerHTML = `
+      <img src="imagenes/${cat.id}.png" alt="${cat.nombre}" loading="lazy">
+      <span class="nombre">${cat.nombre}</span>
+    `;
+    card.addEventListener('click', () => abrirModalCategoria(cat));
+    categoriasGrid.appendChild(card);
+  });
+}
 
   // ================================================================
   // MODAL DE PRODUCTOS (AHORA SE QUEDA ABIERTO PARA AGREGAR VARIOS)
