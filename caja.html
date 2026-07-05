@@ -35,9 +35,9 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       cursor: pointer;
       transition: all 0.15s;
-      border: 3px solid #da291c;  /* Borde más visible y grueso */
-      font-weight: 700;           /* Negritas */
-      font-size: 1.2rem;          /* Título más grande */
+      border: 3px solid #da291c;
+      font-weight: 700;
+      font-size: 1.2rem;
       line-height: 1.3;
     }
     .cat-card:active { transform: scale(0.95); background: #f0f0f0; }
@@ -51,8 +51,8 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
     .cat-card .nombre {
-      font-size: 1.1rem;   /* Aumentar tamaño */
-      font-weight: 700;    /* Negritas */
+      font-size: 1.1rem;
+      font-weight: 700;
       display: block;
       margin-top: 4px;
     }
@@ -83,9 +83,35 @@
     .btn-pagado { background: #ff9800; }
     .btn-entregado { background: #4caf50; }
     .btn-entregado:disabled { opacity: 0.5; }
+
+    /* ===== MODAL ===== */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
-    .modal { background: white; border-radius: 30px; max-width: 500px; width: 100%; padding: 24px; max-height: 90vh; overflow-y: auto; }
+    .modal {
+      background: white;
+      border-radius: 30px;
+      max-width: 500px;
+      width: 100%;
+      padding: 24px;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative; /* Para posicionar el botón X */
+    }
     .modal h3 { font-size: 1.5rem; margin-bottom: 16px; }
+    .modal .modal-close {
+      position: absolute;
+      top: 12px;
+      right: 18px;
+      font-size: 2rem;
+      font-weight: bold;
+      color: #da291c;
+      cursor: pointer;
+      background: none;
+      border: none;
+      line-height: 1;
+      padding: 0;
+      transition: transform 0.1s;
+    }
+    .modal .modal-close:active { transform: scale(0.8); }
     .modal .opcion { display: block; padding: 14px; background: #f0f0f0; border-radius: 16px; margin-bottom: 8px; cursor: pointer; text-align: center; font-weight: 600; border: 2px solid transparent; }
     .modal .opcion:active { background: #ddd; }
     .modal .paso-titulo { font-weight: bold; margin: 12px 0 6px; }
@@ -93,7 +119,8 @@
     .modal .sub-opciones button { background: #eee; border: none; border-radius: 30px; padding: 8px 16px; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
     .modal .sub-opciones button:active { background: #ccc; }
     .modal .sub-opciones button.seleccionado { background: #da291c; color: white; }
-    .modal .cerrar-modal { background: #ccc; border: none; border-radius: 30px; padding: 10px; width: 100%; margin-top: 12px; font-weight: bold; font-size: 1rem; }
+    .modal .cerrar-modal { background: #ccc; border: none; border-radius: 30px; padding: 10px; width: 100%; margin-top: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; }
+
     .resumen-turno { font-size: 0.9rem; background: #fafafa; padding: 10px; border-radius: 12px; max-height: 400px; overflow-y: auto; }
     .resumen-turno .fila { display: flex; justify-content: space-between; }
     .resumen-pedido { border-bottom: 1px solid #ddd; padding: 8px 0; }
@@ -374,30 +401,37 @@
   }
 
   // ================================================================
-  // RENDERIZAR CATEGORÍAS CON IMÁGENES Y BORDES
+  // RENDERIZAR CATEGORÍAS CON IMÁGENES
   // ================================================================
- function renderCategorias() {
-  categoriasGrid.innerHTML = '';
-  categorias.forEach(cat => {
-    const card = document.createElement('div');
-    card.className = 'cat-card';
-    card.innerHTML = `
-      <img src="imagenes/${cat.id}.png" alt="${cat.nombre}" loading="lazy">
-      <span class="nombre">${cat.nombre}</span>
-    `;
-    card.addEventListener('click', () => abrirModalCategoria(cat));
-    categoriasGrid.appendChild(card);
-  });
-}
+  function renderCategorias() {
+    categoriasGrid.innerHTML = '';
+    categorias.forEach(cat => {
+      const card = document.createElement('div');
+      card.className = 'cat-card';
+      card.innerHTML = `
+        <img src="imagenes/${cat.id}.png" alt="${cat.nombre}" loading="lazy">
+        <span class="nombre">${cat.nombre}</span>
+      `;
+      card.addEventListener('click', () => abrirModalCategoria(cat));
+      categoriasGrid.appendChild(card);
+    });
+  }
 
   // ================================================================
-  // MODAL DE PRODUCTOS (AHORA SE QUEDA ABIERTO PARA AGREGAR VARIOS)
+  // MODAL DE PRODUCTOS (CON X PARA CERRAR)
   // ================================================================
   function abrirModalCategoria(cat) {
     modalContenido.innerHTML = '';
     const titulo = document.createElement('h3');
     titulo.textContent = `${cat.emoji} ${cat.nombre}`;
     modalContenido.appendChild(titulo);
+
+    // Botón de cierre (X) en la esquina superior derecha
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'modal-close';
+    closeBtn.textContent = '✕';
+    closeBtn.addEventListener('click', () => { modalSubproductos.style.display = 'none'; });
+    modalContenido.appendChild(closeBtn);
 
     cat.grupos.forEach(grupo => {
       const grupoDiv = document.createElement('div');
@@ -417,7 +451,7 @@
             abrirAsistenteCrepa();
           } else {
             agregarProducto(item);
-            // 👇 NO cerramos el modal para seguir agregando
+            // No cerramos el modal para seguir agregando
           }
         });
         grupoDiv.appendChild(btn);
@@ -431,7 +465,7 @@
       btnPapas.textContent = '🍟 Papas Extra +$17';
       btnPapas.addEventListener('click', () => {
         agregarProducto(PAPAS_EXTRA);
-        // 👇 NO cerramos el modal
+        // No cerramos el modal
       });
       modalContenido.appendChild(btnPapas);
     }
@@ -445,7 +479,7 @@
   }
 
   // ================================================================
-  // ASISTENTE DE CREPA (3 PASOS) - SIN CAMBIOS
+  // ASISTENTE DE CREPA (CON X PARA CERRAR)
   // ================================================================
   function abrirAsistenteCrepa() {
     const pasos = [
@@ -461,9 +495,23 @@
     titulo.textContent = '🥞 Arma tu Crepa Normal';
     modalContenido.appendChild(titulo);
 
+    // Botón de cierre (X) en la esquina superior derecha
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'modal-close';
+    closeBtn.textContent = '✕';
+    closeBtn.addEventListener('click', () => { modalSubproductos.style.display = 'none'; });
+    modalContenido.appendChild(closeBtn);
+
     function renderPaso() {
       modalContenido.innerHTML = '';
       modalContenido.appendChild(titulo);
+      // Volvemos a agregar el botón X en cada paso
+      const closeBtnInner = document.createElement('button');
+      closeBtnInner.className = 'modal-close';
+      closeBtnInner.textContent = '✕';
+      closeBtnInner.addEventListener('click', () => { modalSubproductos.style.display = 'none'; });
+      modalContenido.appendChild(closeBtnInner);
+
       const pasoDiv = document.createElement('div');
       pasoDiv.innerHTML = `<div class="paso-titulo">${pasos[pasoActual].titulo}</div><div class="sub-opciones"></div>`;
       const contenedorOpciones = pasoDiv.querySelector('.sub-opciones');
@@ -481,7 +529,7 @@
             const ingredientes = `Masa de crepa, ${seleccionados[0]}, ${seleccionados[1]}, ${seleccionados[2]}`;
             const precio = 45;
             agregarProducto({ nombre: nombreCompleto, precio, ingredientes });
-            // NO cerramos el modal (se queda abierto para seguir)
+            // No cerramos el modal (se queda abierto)
           }
         });
         contenedorOpciones.appendChild(btn);
@@ -507,7 +555,7 @@
   }
 
   // ================================================================
-  // MANEJO DEL PEDIDO ACTUAL (SIN CAMBIOS)
+  // MANEJO DEL PEDIDO ACTUAL
   // ================================================================
   function agregarProducto(item) {
     pedidoActual.push({
@@ -551,7 +599,7 @@
   }
 
   // ================================================================
-  // ENVIAR A COCINA (SIN CAMBIOS)
+  // ENVIAR A COCINA
   // ================================================================
   btnEnviar.addEventListener('click', async () => {
     if (pedidoActual.length === 0) {
@@ -595,7 +643,7 @@
   });
 
   // ================================================================
-  // IMPRIMIR TICKET (SIN CAMBIOS)
+  // IMPRIMIR TICKET
   // ================================================================
   btnImprimir.addEventListener('click', () => {
     if (pedidoActual.length === 0) {
@@ -618,13 +666,11 @@
   // ================================================================
   btnExcel.addEventListener('click', async () => {
     const pedidos = await getPedidosTurno();
-    // Filtrar solo los pedidos que están entregados
     const pedidosEntregados = pedidos.filter(p => p.entregado === true);
     if (pedidosEntregados.length === 0) {
       alert('No hay pedidos entregados en este turno.');
       return;
     }
-    // Ordenar por número de pedido ascendente
     pedidosEntregados.sort((a, b) => a.numeroPedido - b.numeroPedido);
 
     const data = [];
@@ -643,7 +689,6 @@
       });
     });
 
-    // Agregar fila de total al final
     data.push({
       'Número de pedido': '',
       'Producto': 'TOTAL',
@@ -658,7 +703,7 @@
   });
 
   // ================================================================
-  // CERRAR TURNO (SIN CAMBIOS)
+  // CERRAR TURNO
   // ================================================================
   btnCerrar.addEventListener('click', async () => {
     const confirmar = confirm('¿Cerrar turno? Se eliminarán todos los pedidos y se reiniciará el contador.');
@@ -680,7 +725,7 @@
   });
 
   // ================================================================
-  // PEDIDOS EN CURSO (TIEMPO REAL) - SIN CAMBIOS
+  // PEDIDOS EN CURSO (TIEMPO REAL)
   // ================================================================
   function iniciarEscuchaPedidos() {
     const q = query(collection(db, 'pedidos'), orderBy('fechaHora', 'desc'));
@@ -771,7 +816,7 @@
   }
 
   // ================================================================
-  // RESUMEN DEL TURNO (SIN CAMBIOS)
+  // RESUMEN DEL TURNO
   // ================================================================
   async function actualizarResumenTurno() {
     const pedidos = await getPedidosTurno();
