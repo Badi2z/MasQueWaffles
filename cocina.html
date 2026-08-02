@@ -33,16 +33,7 @@
     .pedido-card .producto.listo { background: #1e3a1e; border-left-color: #4caf50; }
     .pedido-card .producto .nombre { font-size: 1.5rem; font-weight: bold; display: flex; justify-content: space-between; flex-wrap: wrap; }
     .pedido-card .producto .precio { font-size: 1.3rem; color: #ffc72c; }
-    .pedido-card .producto .ingredientes { 
-      font-size: 1.5rem; 
-      margin-top: 6px; 
-      color: #ffffff; 
-      background: #1a1a1a; 
-      padding: 10px 14px; 
-      border-radius: 12px; 
-      line-height: 1.6; 
-      font-weight: 400; 
-    }
+    .pedido-card .producto .ingredientes { font-size: 1.5rem; margin-top: 6px; color: #ffffff; background: #1a1a1a; padding: 10px 14px; border-radius: 12px; line-height: 1.6; font-weight: 400; }
     .pedido-card .producto .nota { font-size: 1.2rem; color: #ffa726; margin-top: 4px; }
     .pedido-card .producto .estado-icono { margin-left: 8px; font-weight: bold; font-size: 1.2rem; }
     .pedido-card .acciones-producto { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
@@ -56,19 +47,7 @@
     .sin-pedidos { text-align: center; font-size: 1.8rem; color: #666; padding: 60px 0; }
     .nota-pedido { background: #2a2a2a; padding: 10px 16px; border-radius: 16px; margin-bottom: 12px; font-size: 1.2rem; border-left: 4px solid #ffa726; }
     .nota-pedido strong { color: #ffa726; }
-    .btn-imprimir-comanda {
-      background: #2196f3;
-      color: white;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 30px;
-      font-weight: bold;
-      font-size: 0.9rem;
-      cursor: pointer;
-      margin-top: 8px;
-      display: inline-block;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
+    .btn-imprimir-comanda { background: #2196f3; color: white; border: none; padding: 10px 16px; border-radius: 30px; font-weight: bold; font-size: 0.9rem; cursor: pointer; margin-top: 8px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
     .btn-imprimir-comanda:active { transform: scale(0.96); }
     @media (max-width: 600px) {
       .pedido-card .cabecera { font-size: 1.2rem; }
@@ -260,7 +239,6 @@
       totalPedidoDiv.textContent = `Total del pedido: $${ped.total.toFixed(2)}`;
       card.appendChild(totalPedidoDiv);
 
-      // Botón para imprimir comanda de este pedido
       const btnComanda = document.createElement('button');
       btnComanda.className = 'btn-imprimir-comanda';
       btnComanda.textContent = '🖨️ Imprimir comanda (2 copias)';
@@ -348,104 +326,80 @@
   }
 
   // ================================================================
-  // 🖨️ FUNCIÓN PARA IMPRIMIR COMANDAS (CORREGIDA PARA 80mm)
+  // 🖨️ FUNCIÓN PARA IMPRIMIR COMANDAS (TEXTO PLANO)
   // ================================================================
   function imprimirComanda(ped, productosOrdenados) {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX');
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    let contenido = '';
+    let texto = '';
     const numeroCopias = 2;
 
     for (let copia = 1; copia <= numeroCopias; copia++) {
-      contenido += `
-        <div style="width: 100%; max-width: 80mm; margin: 0 auto; padding: 2mm 3mm; font-family: 'Courier New', monospace; font-size: 10pt; box-sizing: border-box;">
-          <div style="text-align: center; border-bottom: 1px dashed #333; padding-bottom: 4px;">
-            <div style="font-size: 14pt; font-weight: bold; color: #da291c;">🧇 MasQueWaffles</div>
-            <div style="font-size: 7pt; color: #555;">Comanda #${copia} de ${numeroCopias}</div>
-          </div>
-          <div style="padding: 3px 0; border-bottom: 1px dashed #ccc; display: flex; justify-content: space-between; font-weight: bold; font-size: 9pt;">
-            <span>Pedido #${ped.numeroPedido}</span>
-            <span>${hora}</span>
-          </div>
-          <div style="padding: 3px 0;">
-            <div style="font-weight: bold; font-size: 9pt; border-bottom: 1px solid #ccc; margin-bottom: 2px;">PRODUCTOS</div>
-      `;
+      texto += `\n`;
+      texto += `================================\n`;
+      texto += `         🧇 MasQueWaffles\n`;
+      texto += `       Comanda #${copia} de ${numeroCopias}\n`;
+      texto += `================================\n`;
+      texto += `Pedido #${ped.numeroPedido}        ${hora}\n`;
+      texto += `────────────────────────────────\n`;
+      texto += `📋 PRODUCTOS\n`;
 
       productosOrdenados.forEach((prod) => {
-        contenido += `
-          <div style="padding: 1px 0; display: flex; align-items: center; font-size: 9pt; gap: 3px;">
-            <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #333; flex-shrink: 0;"></span>
-            <span style="flex: 1;">${prod.nombre}</span>
-            <span style="font-weight: bold; flex-shrink: 0;">$${prod.precio}</span>
-          </div>
-        `;
+        texto += `  ☐ ${prod.nombre}\n`;
         if (prod.nota) {
-          contenido += `
-            <div style="padding: 0 0 1px 16px; font-size: 7pt; color: #da291c; font-style: italic;">
-              📝 ${prod.nota}
-            </div>
-          `;
+          texto += `     📝 ${prod.nota}\n`;
         }
       });
 
       if (ped.notaPedido) {
-        contenido += `
-          <div style="padding: 3px 0; font-size: 8pt; color: #da291c; border-top: 1px dashed #ccc; margin-top: 2px;">
-            📝 ${ped.notaPedido}
-          </div>
-        `;
+        texto += `\n📝 ${ped.notaPedido}\n`;
       }
 
-      contenido += `
-          </div>
-          <div style="border-top: 2px dashed #333; padding-top: 3px; text-align: center;">
-            <div style="font-size: 11pt; font-weight: bold;">Total: $${ped.total.toFixed(2)}</div>
-            <div style="font-size: 6pt; color: #888; margin-top: 1px;">${fecha}</div>
-          </div>
-        </div>
-      `;
+      texto += `────────────────────────────────\n`;
+      texto += `Total: $${ped.total.toFixed(2)}\n`;
+      texto += `         ${fecha}\n`;
+      texto += `================================\n`;
+      texto += `\n\n`; // Espacio entre copias
     }
 
-    const ventana = window.open('', '_blank', 'width=350,height=500');
+    // Crear un blob con el texto y abrirlo
+    const blob = new Blob([texto], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const ventana = window.open(url, '_blank', 'width=400,height=600');
     ventana.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
         <title>Comanda #${ped.numeroPedido}</title>
         <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
           body { 
+            font-family: 'Courier New', monospace; 
             background: white; 
-            margin: 0; 
-            padding: 0; 
-            display: flex;
-            justify-content: center;
+            color: black; 
+            padding: 10px; 
+            margin: 0;
+            white-space: pre-wrap;
+            font-size: 12pt;
           }
-          @page { 
-            size: 80mm 297mm; 
-            margin: 0mm; 
-          }
+          @page { size: 80mm 297mm; margin: 0mm; }
           @media print {
-            body { margin: 0; padding: 0; }
+            body { padding: 0; margin: 0; }
             .no-print { display: none !important; }
           }
-          .print-content { width: 80mm; }
+          .no-print { text-align: center; padding: 10px; border-top: 1px solid #ccc; }
+          .no-print button { padding: 8px 20px; border: none; border-radius: 30px; font-size: 0.9rem; cursor: pointer; margin: 0 4px; }
+          .btn-print { background: #2196f3; color: white; }
+          .btn-close { background: #ccc; color: #333; }
         </style>
       </head>
       <body>
-        <div class="print-content">${contenido}</div>
-        <div style="text-align: center; padding: 10px; font-size: 0.8rem; color: #666; border-top: 1px solid #ccc; width: 80mm;" class="no-print">
-          <button onclick="window.print()" style="padding: 8px 20px; background: #2196f3; color: white; border: none; border-radius: 30px; font-size: 0.9rem; cursor: pointer; margin: 0 4px;">
-            🖨️ Imprimir
-          </button>
-          <button onclick="window.close()" style="padding: 8px 20px; background: #ccc; color: #333; border: none; border-radius: 30px; font-size: 0.9rem; cursor: pointer; margin: 0 4px;">
-            Cerrar
-          </button>
-          <div style="margin-top: 4px; font-size: 0.7rem; color: #999;">
-            Se imprimirán 2 copias automáticamente
-          </div>
+        <pre>${texto}</pre>
+        <div class="no-print">
+          <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
+          <button class="btn-close" onclick="window.close()">Cerrar</button>
+          <div style="margin-top:4px;font-size:0.7rem;color:#999;">Se imprimirán 2 copias automáticamente</div>
         </div>
         <script>
           setTimeout(() => { window.print(); }, 500);
@@ -454,10 +408,11 @@
       </html>
     `);
     ventana.document.close();
+    URL.revokeObjectURL(url);
   }
 
   // ================================================================
-  // IMPRIMIR TODAS LAS COMANDAS (botón general)
+  // IMPRIMIR TODAS LAS COMANDAS
   // ================================================================
   btnImprimirComanda.addEventListener('click', () => {
     const pedidosEnPreparacion = pedidosCache.filter(p => p.estadoPedido === 'en_preparacion' || p.estadoPedido === 'listo');
