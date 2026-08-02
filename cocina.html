@@ -21,6 +21,20 @@
     .header .turno { background: #ffc72c; color: #1c1c1e; padding: 8px 20px; border-radius: 40px; font-weight: bold; font-size: 1.2rem; }
     .btn-print { background: #ffc72c; color: #1c1c1e; border: none; padding: 12px 24px; border-radius: 40px; font-weight: bold; font-size: 1.1rem; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
     .btn-print:active { transform: scale(0.96); }
+    .btn-sonido {
+      background: #25D366;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 30px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .btn-sonido:active { transform: scale(0.96); }
+    .btn-sonido.activo { background: #4caf50; }
+    .btn-sonido.inactivo { background: #f44336; }
     .pedido-container { display: flex; flex-direction: column; gap: 20px; }
     .pedido-card { background: #1e1e1e; border-radius: 30px; padding: 20px; border-left: 10px solid #da291c; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
     .pedido-card.listo { border-left-color: #4caf50; background: #1e2a1e; }
@@ -61,6 +75,7 @@
 <div class="header">
   <h1>🍳 MasQueWaffles <span style="font-weight:300;font-size:1.2rem;">Cocina</span></h1>
   <div class="turno">Turno #<span id="turnoNum">1</span></div>
+  <button class="btn-sonido" id="btnActivarSonido">🔊 Activar sonido</button>
   <button class="btn-print" id="btnImprimirComanda">🖨️ Comanda</button>
 </div>
 <div id="pedidosContainer" class="pedido-container">
@@ -92,19 +107,29 @@
   const turnoNumSpan = document.getElementById('turnoNum');
   const pedidosContainer = document.getElementById('pedidosContainer');
   const btnImprimirComanda = document.getElementById('btnImprimirComanda');
+  const btnActivarSonido = document.getElementById('btnActivarSonido');
 
   let turnoActual = 1;
   let pedidosCache = [];
   let pedidosAnteriores = [];
+  let sonidoActivado = false;
 
   // ================================================================
-  // FUNCION PARA REPRODUCIR SONIDO
+  // 🔊 FUNCION PARA REPRODUCIR SONIDO (CON ACTIVACION)
   // ================================================================
   function reproducirSonido() {
+    if (!sonidoActivado) {
+      console.log('🔇 Sonido no activado');
+      return;
+    }
+
     try {
       const audio = new Audio('https://badi2z.github.io/MasQueWaffles/notificacion.mp3');
       audio.volume = 0.8;
-      audio.play().catch(() => {
+      audio.play().then(() => {
+        console.log('🔊 Sonido reproducido!');
+      }).catch(() => {
+        console.log('⚠️ Error al reproducir sonido, usando beep de respaldo');
         try {
           const ctx = new (window.AudioContext || window.webkitAudioContext)();
           const oscillator = ctx.createOscillator();
@@ -121,10 +146,31 @@
         }
       });
     } catch (e) {
-      document.body.style.backgroundColor = '#1a1a1a';
-      setTimeout(() => { document.body.style.backgroundColor = ''; }, 300);
+      console.log('Error al reproducir sonido:', e);
     }
   }
+
+  // ================================================================
+  // 🟢 ACTIVAR SONIDO (BOTON)
+  // ================================================================
+  btnActivarSonido.addEventListener('click', () => {
+    sonidoActivado = !sonidoActivado;
+    if (sonidoActivado) {
+      btnActivarSonido.textContent = '🔊 Sonido activado ✅';
+      btnActivarSonido.className = 'btn-sonido activo';
+      // Probar sonido
+      try {
+        const audio = new Audio('https://badi2z.github.io/MasQueWaffles/notificacion.mp3');
+        audio.volume = 0.8;
+        audio.play().catch(() => {});
+      } catch (e) {}
+      console.log('🔊 Sonido activado');
+    } else {
+      btnActivarSonido.textContent = '🔇 Sonido desactivado ❌';
+      btnActivarSonido.className = 'btn-sonido inactivo';
+      console.log('🔇 Sonido desactivado');
+    }
+  });
 
   // ================================================================
   // FUNCION PARA ORDENAR PRODUCTOS POR GRUPO
@@ -173,7 +219,7 @@
   }
 
   // ================================================================
-  // FUNCION PRINCIPAL PARA LIMPIAR TEXTO (SIN EMOJIS, SIN ACENTOS)
+  // FUNCION PRINCIPAL PARA LIMPIAR TEXTO
   // ================================================================
   function limpiarTexto(texto) {
     if (!texto) return '';
@@ -184,7 +230,7 @@
   }
 
   // ================================================================
-  // FUNCION PARA DIVIDIR TEXTO EN LINEAS DE MAXIMO N CARACTERES
+  // FUNCION PARA DIVIDIR TEXTO
   // ================================================================
   function dividirTexto(texto, maxLen) {
     const palabras = texto.split(' ');
@@ -204,7 +250,7 @@
   }
 
   // ================================================================
-  // 🖨️ FUNCION PARA IMPRIMIR COMANDAS (CON PRECIOS Y FORMATO CORREGIDO)
+  // 🖨️ FUNCION PARA IMPRIMIR COMANDAS
   // ================================================================
   function imprimirComanda(ped, productosOrdenados) {
     const ahora = new Date();
@@ -226,7 +272,6 @@
       return limpio.padEnd(ANCHO, ' ');
     }
 
-    // Generar UNA SOLA comanda
     texto += '================================\r\n';
     texto += centrar('MasQueWaffles') + '\r\n';
     texto += centrar('Comanda') + '\r\n';
@@ -275,7 +320,6 @@
     texto += '================================\r\n';
     texto += '\r\n';
 
-    // Crear ventana de impresion
     const ventana = window.open('', '_blank', 'width=400,height=600');
     ventana.document.write(`
       <!DOCTYPE html>
@@ -292,40 +336,13 @@
             max-width: 80mm;
             margin: 0 auto;
           }
-          @page { 
-            size: 80mm 297mm; 
-            margin: 0mm; 
-          }
-          @media print {
-            body { padding: 0; margin: 0; }
-            .no-print { display: none !important; }
-          }
-          .no-print { 
-            text-align: center; 
-            padding: 8px; 
-            border-top: 1px solid #ccc; 
-            font-family: Arial, sans-serif;
-            max-width: 80mm;
-          }
-          .no-print button { 
-            padding: 6px 16px; 
-            border: none; 
-            border-radius: 20px; 
-            font-size: 0.8rem; 
-            cursor: pointer; 
-            margin: 0 4px; 
-          }
+          @page { size: 80mm 297mm; margin: 0mm; }
+          @media print { body { padding: 0; margin: 0; } .no-print { display: none !important; } }
+          .no-print { text-align: center; padding: 8px; border-top: 1px solid #ccc; font-family: Arial, sans-serif; max-width: 80mm; }
+          .no-print button { padding: 6px 16px; border: none; border-radius: 20px; font-size: 0.8rem; cursor: pointer; margin: 0 4px; }
           .btn-print { background: #2196f3; color: white; }
           .btn-close { background: #ccc; color: #333; }
-          pre {
-            margin: 0;
-            padding: 2mm 2mm;
-            font-family: 'Courier New', monospace;
-            font-size: 9pt;
-            line-height: 1.3;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-          }
+          pre { margin: 0; padding: 2mm 2mm; font-family: 'Courier New', monospace; font-size: 9pt; line-height: 1.3; white-space: pre-wrap; word-wrap: break-word; }
         </style>
       </head>
       <body>
@@ -334,9 +351,7 @@
           <button class="btn-print" onclick="window.print()">Imprimir</button>
           <button class="btn-close" onclick="window.close()">Cerrar</button>
         </div>
-        <script>
-          setTimeout(function() { window.print(); }, 800);
-        <\/script>
+        <script>setTimeout(function() { window.print(); }, 800);<\/script>
       </body>
       </html>
     `);
@@ -344,37 +359,66 @@
   }
 
   // ================================================================
-  // 🔥 FUNCION PARA DETECTAR NUEVOS PEDIDOS (SOLO SONIDO, SIN IMPRIMIR)
+  // 🔥 FUNCION PARA DETECTAR NUEVOS PEDIDOS (CON SONIDO)
   // ================================================================
   function iniciarEscucha() {
-    const q = query(collection(db, 'pedidos'), orderBy('fechaHora', 'desc'));
-    onSnapshot(q, (snapshot) => {
-      const pedidos = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.turno === turnoActual && !data.entregado) {
-          pedidos.push({ id: doc.id, ...data });
+    getTurno().then(() => {
+      console.log('📡 Escuchando pedidos del turno:', turnoActual);
+      
+      const q = query(collection(db, 'pedidos'), orderBy('fechaHora', 'desc'));
+      onSnapshot(q, (snapshot) => {
+        const pedidos = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.turno === turnoActual && !data.entregado) {
+            pedidos.push({ id: doc.id, ...data });
+          }
+        });
+
+        const idsActuales = pedidos.map(p => p.id);
+        const idsAnteriores = pedidosAnteriores.map(p => p.id);
+        const hayNuevo = idsActuales.some(id => !idsAnteriores.includes(id));
+
+        // 🔥 SI HAY NUEVO PEDIDO, REPRODUCIR SONIDO
+        if (hayNuevo && pedidos.length > 0) {
+          console.log('🔊 Nuevo pedido detectado!');
+          reproducirSonido();
         }
+
+        pedidosAnteriores = pedidos;
+        pedidosCache = pedidos;
+        renderPedidos();
+      }, (error) => {
+        console.error('❌ Error en escucha de cocina:', error);
       });
-
-      const idsActuales = pedidos.map(p => p.id);
-      const idsAnteriores = pedidosAnteriores.map(p => p.id);
-      const hayNuevo = idsActuales.some(id => !idsAnteriores.includes(id));
-
-      // 🔥 SOLO SONIDO, SIN IMPRESION AUTOMATICA
-      if (hayNuevo && pedidos.length > 0) {
-        reproducirSonido();
-        console.log('🔊 Nuevo pedido! Sonido reproducido.');
-      }
-
-      pedidosAnteriores = pedidos;
-      pedidosCache = pedidos;
-      renderPedidos();
-    }, (error) => {
-      console.error('Error en escucha de cocina:', error);
     });
   }
 
+  // ================================================================
+  // 🟢 FUNCION PARA OBTENER EL TURNO ACTUAL
+  // ================================================================
+  async function getTurno() {
+    try {
+      const docRef = doc(db, 'config', 'turnoActual');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        turnoActual = docSnap.data().turno || 1;
+        turnoNumSpan.textContent = turnoActual;
+        console.log('✅ Turno actual:', turnoActual);
+      } else {
+        turnoActual = 1;
+        turnoNumSpan.textContent = turnoActual;
+      }
+    } catch (error) {
+      console.error('❌ Error al obtener turno:', error);
+      turnoActual = 1;
+      turnoNumSpan.textContent = turnoActual;
+    }
+  }
+
+  // ================================================================
+  // 🟢 FUNCION PARA RENDERIZAR PEDIDOS
+  // ================================================================
   function renderPedidos() {
     if (pedidosCache.length === 0) {
       pedidosContainer.innerHTML = '<div class="sin-pedidos">No hay pedidos activos</div>';
@@ -382,6 +426,8 @@
     }
     pedidosContainer.innerHTML = '';
     pedidosCache.forEach(ped => {
+      if (!ped.productos || ped.productos.length === 0) return;
+
       const productosOrdenados = ordenarProductos([...ped.productos]);
 
       const card = document.createElement('div');
@@ -489,7 +535,7 @@
   }
 
   // ================================================================
-  // IMPRIMIR TODAS LAS COMANDAS (BOTON GENERAL)
+  // IMPRIMIR TODAS LAS COMANDAS
   // ================================================================
   btnImprimirComanda.addEventListener('click', () => {
     const pedidosEnPreparacion = pedidosCache.filter(p => p.estadoPedido === 'en_preparacion' || p.estadoPedido === 'listo');
@@ -505,15 +551,19 @@
   });
 
   // ================================================================
-  // INICIALIZACION
+  // 🔥 INICIALIZACION CON AUTENTICACION
   // ================================================================
   signInAnonymously(auth)
     .then(() => {
-      console.log('Conectado a Firebase (Cocina)');
+      console.log('✅ Conectado a Firebase (Cocina)');
+      // Activar sonido por defecto
+      sonidoActivado = true;
+      btnActivarSonido.textContent = '🔊 Sonido activado ✅';
+      btnActivarSonido.className = 'btn-sonido activo';
       iniciarApp();
     })
     .catch((error) => {
-      console.error('Error de autenticacion:', error);
+      console.error('❌ Error de autenticacion:', error);
       alert('No se pudo conectar con la base de datos.');
     });
 
