@@ -69,7 +69,7 @@
 
 <script type="module">
   // ================================================================
-  // 🔴 CONFIGURACIÓN DE FIREBASE
+  // 🔴 CONFIGURACION DE FIREBASE
   // ================================================================
   const firebaseConfig = {
     apiKey: "AIzaSyAtUbhUZW9qZlpueY3JrYXgnkcXfHYdUc0",
@@ -98,7 +98,7 @@
   let pedidosAnteriores = [];
 
   // ================================================================
-  // 🔊 FUNCIÓN PARA REPRODUCIR SONIDO
+  // FUNCION PARA REPRODUCIR SONIDO
   // ================================================================
   function reproducirSonido() {
     try {
@@ -127,7 +127,7 @@
   }
 
   // ================================================================
-  // 🧹 FUNCIÓN PARA ORDENAR PRODUCTOS POR GRUPO
+  // FUNCION PARA ORDENAR PRODUCTOS POR GRUPO
   // ================================================================
   function ordenarProductos(productos) {
     const ordenGrupos = {
@@ -139,7 +139,7 @@
       'PAPAS Y SALCHICHA': 6,
       'NUGGETS, PALITOS, AROS': 7,
       'SOPAS': 8,
-      'FRAPPÉS': 9,
+      'FRAPPES': 9,
       'MALTEADAS': 10,
       'JELLY COFFEE': 11,
       'SODA ITALIANA': 12
@@ -155,7 +155,7 @@
       if (nombreUpper.includes('PAPAS') || nombreUpper.includes('SALCHIPAPAS') || nombreUpper.includes('SALCHIPULPOS')) return 'PAPAS Y SALCHICHA';
       if (nombreUpper.includes('NUGGETS') || nombreUpper.includes('PALITOS') || nombreUpper.includes('AROS') || nombreUpper.includes('SINCRONIZADA')) return 'NUGGETS, PALITOS, AROS';
       if (nombreUpper.includes('SOPA') || nombreUpper.includes('BULDAK') || nombreUpper.includes('RAMEN')) return 'SOPAS';
-      if (nombreUpper.includes('FRAPPÉ') || nombreUpper.includes('FRAPPE')) return 'FRAPPÉS';
+      if (nombreUpper.includes('FRAPPE')) return 'FRAPPES';
       if (nombreUpper.includes('MALTEADA')) return 'MALTEADAS';
       if (nombreUpper.includes('JELLY')) return 'JELLY COFFEE';
       if (nombreUpper.includes('SODA')) return 'SODA ITALIANA';
@@ -170,6 +170,37 @@
       if (ordenA !== ordenB) return ordenA - ordenB;
       return a.nombre.localeCompare(b.nombre);
     });
+  }
+
+  // ================================================================
+  // FUNCION PRINCIPAL PARA LIMPIAR TEXTO (SIN EMOJIS, SIN ACENTOS)
+  // ================================================================
+  function limpiarTexto(texto) {
+    if (!texto) return '';
+    let limpio = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    limpio = limpio.replace(/[^\x00-\x7F]/g, '');
+    limpio = limpio.replace(/[^a-zA-Z0-9 .,\-$()]/g, ' ');
+    return limpio.trim();
+  }
+
+  // ================================================================
+  // FUNCION PARA DIVIDIR TEXTO EN LINEAS DE MAXIMO N CARACTERES
+  // ================================================================
+  function dividirTexto(texto, maxLen) {
+    const palabras = texto.split(' ');
+    const lineas = [];
+    let lineaActual = '';
+    
+    for (let palabra of palabras) {
+      if ((lineaActual + ' ' + palabra).length <= maxLen) {
+        lineaActual += (lineaActual ? ' ' : '') + palabra;
+      } else {
+        if (lineaActual) lineas.push(lineaActual);
+        lineaActual = palabra;
+      }
+    }
+    if (lineaActual) lineas.push(lineaActual);
+    return lineas;
   }
 
   // ================================================================
@@ -201,7 +232,7 @@
 
       if (hayNuevo && pedidos.length > 0) {
         reproducirSonido();
-        console.log('🔊 ¡Nuevo pedido! Reproduciendo sonido...');
+        console.log('Nuevo pedido! Reproduciendo sonido...');
       }
 
       pedidosAnteriores = pedidos;
@@ -214,7 +245,7 @@
 
   function renderPedidos() {
     if (pedidosCache.length === 0) {
-      pedidosContainer.innerHTML = '<div class="sin-pedidos">✅ No hay pedidos activos</div>';
+      pedidosContainer.innerHTML = '<div class="sin-pedidos">No hay pedidos activos</div>';
       return;
     }
     pedidosContainer.innerHTML = '';
@@ -228,9 +259,9 @@
       const cabecera = document.createElement('div');
       cabecera.className = 'cabecera';
       cabecera.innerHTML = `
-        <span>🔢 Pedido #${ped.numeroPedido}</span>
+        <span>Pedido #${ped.numeroPedido}</span>
         <span class="hora">${new Date(ped.fechaHora).toLocaleTimeString()}</span>
-        <span class="estado-pedido ${ped.estadoPedido === 'listo' ? 'listo' : ''}">${ped.estadoPedido === 'listo' ? '✅ LISTO' : '⚙️ EN PREPARACIÓN'}</span>
+        <span class="estado-pedido ${ped.estadoPedido === 'listo' ? 'listo' : ''}">${ped.estadoPedido === 'listo' ? 'LISTO' : 'EN PREPARACION'}</span>
       `;
       card.appendChild(cabecera);
 
@@ -241,7 +272,7 @@
 
       const btnComanda = document.createElement('button');
       btnComanda.className = 'btn-imprimir-comanda';
-      btnComanda.textContent = '🖨️ Imprimir comanda (2 copias)';
+      btnComanda.textContent = 'Imprimir comanda (2 copias)';
       btnComanda.addEventListener('click', () => {
         imprimirComanda(ped, productosOrdenados);
       });
@@ -250,7 +281,7 @@
       if (ped.notaPedido) {
         const notaDiv = document.createElement('div');
         notaDiv.className = 'nota-pedido';
-        notaDiv.innerHTML = `<strong>📝 Nota del pedido:</strong> ${ped.notaPedido}`;
+        notaDiv.innerHTML = `<strong>Nota del pedido:</strong> ${ped.notaPedido}`;
         card.appendChild(notaDiv);
       }
 
@@ -259,17 +290,17 @@
         prodDiv.className = 'producto';
         if (prod.estadoProducto === 'listo') prodDiv.classList.add('listo');
 
-        const estadoTexto = prod.estadoProducto === 'listo' ? '✅ LISTO' : '⏳ PREPARANDO';
+        const estadoTexto = prod.estadoProducto === 'listo' ? 'LISTO' : 'PREPARANDO';
         prodDiv.innerHTML = `
           <div class="nombre">
             <span>${prod.nombre} <span class="estado-icono">${estadoTexto}</span></span>
             <span class="precio">$${prod.precio}</span>
           </div>
-          <div class="ingredientes">🧾 ${prod.ingredientes || 'Sin ingredientes'}</div>
-          ${prod.nota ? `<div class="nota">📌 Nota: ${prod.nota}</div>` : ''}
+          <div class="ingredientes">${prod.ingredientes || 'Sin ingredientes'}</div>
+          ${prod.nota ? `<div class="nota">Nota: ${prod.nota}</div>` : ''}
           <div class="acciones-producto">
-            <button class="btn-producto btn-listo" data-pedido="${ped.id}" data-producto="${idx}" ${prod.estadoProducto === 'listo' ? 'disabled' : ''}>✅ Listo</button>
-            <button class="btn-producto btn-cancelar" data-pedido="${ped.id}" data-producto="${idx}">❌ Cancelar</button>
+            <button class="btn-producto btn-listo" data-pedido="${ped.id}" data-producto="${idx}" ${prod.estadoProducto === 'listo' ? 'disabled' : ''}>Listo</button>
+            <button class="btn-producto btn-cancelar" data-pedido="${ped.id}" data-producto="${idx}">Cancelar</button>
           </div>
         `;
         card.appendChild(prodDiv);
@@ -297,7 +328,7 @@
               await updateDoc(doc(db, 'pedidos', ped.id), { productos });
             } catch (e) { alert('Error: ' + e.message); }
           } else {
-            const eliminar = confirm('Este producto aún no está listo. ¿Deseas eliminarlo del pedido?');
+            const eliminar = confirm('Este producto aun no esta listo. Deseas eliminarlo del pedido?');
             if (eliminar) {
               const nuevosProductos = ped.productos.filter((_, i) => i !== idx);
               try {
@@ -312,7 +343,7 @@
       if (todosListos && ped.estadoPedido !== 'listo') {
         const btnPedidoListo = document.createElement('button');
         btnPedidoListo.className = 'btn-pedido-listo';
-        btnPedidoListo.textContent = '✅ Marcar pedido como LISTO';
+        btnPedidoListo.textContent = 'Marcar pedido como LISTO';
         btnPedidoListo.addEventListener('click', async () => {
           try {
             await updateDoc(doc(db, 'pedidos', ped.id), { estadoPedido: 'listo' });
@@ -326,48 +357,80 @@
   }
 
   // ================================================================
-  // 🖨️ FUNCIÓN PARA IMPRIMIR COMANDAS (TEXTO PLANO)
+  // 🖨️ FUNCION PARA IMPRIMIR COMANDAS (TEXTO COMPLETO, SIN RECORTAR)
   // ================================================================
   function imprimirComanda(ped, productosOrdenados) {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX');
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
+    const ANCHO = 30;
     let texto = '';
     const numeroCopias = 2;
 
+    function centrar(t) {
+      const limpio = limpiarTexto(t);
+      const espacios = Math.max(0, Math.floor((ANCHO - limpio.length) / 2));
+      return ' '.repeat(espacios) + limpio;
+    }
+
+    function lineaConContenido(contenido) {
+      const limpio = limpiarTexto(contenido);
+      if (limpio.length > ANCHO) {
+        return limpio.substring(0, ANCHO);
+      }
+      return limpio.padEnd(ANCHO, ' ');
+    }
+
     for (let copia = 1; copia <= numeroCopias; copia++) {
-      texto += `\n`;
-      texto += `================================\n`;
-      texto += `         🧇 MasQueWaffles\n`;
-      texto += `       Comanda #${copia} de ${numeroCopias}\n`;
-      texto += `================================\n`;
-      texto += `Pedido #${ped.numeroPedido}        ${hora}\n`;
-      texto += `────────────────────────────────\n`;
-      texto += `📋 PRODUCTOS\n`;
+      texto += '\r\n';
+      texto += '================================\r\n';
+      texto += centrar('MasQueWaffles') + '\r\n';
+      texto += centrar('Comanda ' + copia + ' de ' + numeroCopias) + '\r\n';
+      texto += '================================\r\n';
+      texto += lineaConContenido('Pedido #' + ped.numeroPedido + ' ' + hora) + '\r\n';
+      texto += '--------------------------------\r\n';
+      texto += ' PRODUCTOS\r\n';
 
       productosOrdenados.forEach((prod) => {
-        texto += `  ☐ ${prod.nombre}\n`;
+        const nombreLimpio = limpiarTexto(prod.nombre);
+        // Dividir el nombre en lineas si es muy largo
+        const lineasNombre = dividirTexto(nombreLimpio, ANCHO - 6);
+        lineasNombre.forEach((linea, idx) => {
+          if (idx === 0) {
+            texto += '  [ ] ' + linea + '\r\n';
+          } else {
+            texto += '       ' + linea + '\r\n';
+          }
+        });
+        
         if (prod.nota) {
-          texto += `     📝 ${prod.nota}\n`;
+          const notaLimpia = limpiarTexto('Nota: ' + prod.nota);
+          const lineasNota = dividirTexto(notaLimpia, ANCHO - 4);
+          lineasNota.forEach(linea => {
+            texto += '     ' + linea + '\r\n';
+          });
         }
       });
 
       if (ped.notaPedido) {
-        texto += `\n📝 ${ped.notaPedido}\n`;
+        const notaPedidoLimpia = limpiarTexto('Nota: ' + ped.notaPedido);
+        const lineasNotaPedido = dividirTexto(notaPedidoLimpia, ANCHO - 2);
+        texto += '\r\n';
+        lineasNotaPedido.forEach(linea => {
+          texto += '  ' + linea + '\r\n';
+        });
       }
 
-      texto += `────────────────────────────────\n`;
-      texto += `Total: $${ped.total.toFixed(2)}\n`;
-      texto += `         ${fecha}\n`;
-      texto += `================================\n`;
-      texto += `\n\n`; // Espacio entre copias
+      texto += '--------------------------------\r\n';
+      texto += lineaConContenido('Total: $' + ped.total.toFixed(2)) + '\r\n';
+      texto += centrar(fecha) + '\r\n';
+      texto += '================================\r\n';
+      texto += '\r\n';
     }
 
-    // Crear un blob con el texto y abrirlo
-    const blob = new Blob([texto], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const ventana = window.open(url, '_blank', 'width=400,height=600');
+    // Crear ventana de impresion
+    const ventana = window.open('', '_blank', 'width=400,height=600');
     ventana.document.write(`
       <!DOCTYPE html>
       <html>
@@ -378,37 +441,61 @@
             font-family: 'Courier New', monospace; 
             background: white; 
             color: black; 
-            padding: 10px; 
+            padding: 0; 
             margin: 0;
-            white-space: pre-wrap;
-            font-size: 12pt;
+            max-width: 80mm;
+            margin: 0 auto;
           }
-          @page { size: 80mm 297mm; margin: 0mm; }
+          @page { 
+            size: 80mm 297mm; 
+            margin: 0mm; 
+          }
           @media print {
             body { padding: 0; margin: 0; }
             .no-print { display: none !important; }
           }
-          .no-print { text-align: center; padding: 10px; border-top: 1px solid #ccc; }
-          .no-print button { padding: 8px 20px; border: none; border-radius: 30px; font-size: 0.9rem; cursor: pointer; margin: 0 4px; }
+          .no-print { 
+            text-align: center; 
+            padding: 8px; 
+            border-top: 1px solid #ccc; 
+            font-family: Arial, sans-serif;
+            max-width: 80mm;
+          }
+          .no-print button { 
+            padding: 6px 16px; 
+            border: none; 
+            border-radius: 20px; 
+            font-size: 0.8rem; 
+            cursor: pointer; 
+            margin: 0 4px; 
+          }
           .btn-print { background: #2196f3; color: white; }
           .btn-close { background: #ccc; color: #333; }
+          pre {
+            margin: 0;
+            padding: 2mm 2mm;
+            font-family: 'Courier New', monospace;
+            font-size: 9pt;
+            line-height: 1.3;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+          }
         </style>
       </head>
       <body>
         <pre>${texto}</pre>
         <div class="no-print">
-          <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
+          <button class="btn-print" onclick="window.print()">Imprimir</button>
           <button class="btn-close" onclick="window.close()">Cerrar</button>
-          <div style="margin-top:4px;font-size:0.7rem;color:#999;">Se imprimirán 2 copias automáticamente</div>
+          <div style="margin-top:4px;font-size:0.7rem;color:#999;">Se imprimiran 2 copias</div>
         </div>
         <script>
-          setTimeout(() => { window.print(); }, 500);
+          setTimeout(function() { window.print(); }, 800);
         <\/script>
       </body>
       </html>
     `);
     ventana.document.close();
-    URL.revokeObjectURL(url);
   }
 
   // ================================================================
@@ -428,15 +515,15 @@
   });
 
   // ================================================================
-  // INICIALIZACIÓN
+  // INICIALIZACION
   // ================================================================
   signInAnonymously(auth)
     .then(() => {
-      console.log('✅ Conectado a Firebase (Cocina)');
+      console.log('Conectado a Firebase (Cocina)');
       iniciarApp();
     })
     .catch((error) => {
-      console.error('Error de autenticación:', error);
+      console.error('Error de autenticacion:', error);
       alert('No se pudo conectar con la base de datos.');
     });
 
