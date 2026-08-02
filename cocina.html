@@ -215,153 +215,12 @@
     }
   }
 
-  function iniciarEscucha() {
-    const q = query(collection(db, 'pedidos'), orderBy('fechaHora', 'desc'));
-    onSnapshot(q, (snapshot) => {
-      const pedidos = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.turno === turnoActual && !data.entregado) {
-          pedidos.push({ id: doc.id, ...data });
-        }
-      });
-
-      const idsActuales = pedidos.map(p => p.id);
-      const idsAnteriores = pedidosAnteriores.map(p => p.id);
-      const hayNuevo = idsActuales.some(id => !idsAnteriores.includes(id));
-
-      if (hayNuevo && pedidos.length > 0) {
-        reproducirSonido();
-        console.log('Nuevo pedido! Reproduciendo sonido...');
-      }
-
-      pedidosAnteriores = pedidos;
-      pedidosCache = pedidos;
-      renderPedidos();
-    }, (error) => {
-      console.error('Error en escucha de cocina:', error);
-    });
-  }
-
-  function renderPedidos() {
-    if (pedidosCache.length === 0) {
-      pedidosContainer.innerHTML = '<div class="sin-pedidos">No hay pedidos activos</div>';
-      return;
-    }
-    pedidosContainer.innerHTML = '';
-    pedidosCache.forEach(ped => {
-      const productosOrdenados = ordenarProductos([...ped.productos]);
-
-      const card = document.createElement('div');
-      card.className = 'pedido-card';
-      if (ped.estadoPedido === 'listo') card.classList.add('listo');
-
-      const cabecera = document.createElement('div');
-      cabecera.className = 'cabecera';
-      cabecera.innerHTML = `
-        <span>Pedido #${ped.numeroPedido}</span>
-        <span class="hora">${new Date(ped.fechaHora).toLocaleTimeString()}</span>
-        <span class="estado-pedido ${ped.estadoPedido === 'listo' ? 'listo' : ''}">${ped.estadoPedido === 'listo' ? 'LISTO' : 'EN PREPARACION'}</span>
-      `;
-      card.appendChild(cabecera);
-
-      const totalPedidoDiv = document.createElement('div');
-      totalPedidoDiv.className = 'total-pedido';
-      totalPedidoDiv.textContent = `Total del pedido: $${ped.total.toFixed(2)}`;
-      card.appendChild(totalPedidoDiv);
-
-      const btnComanda = document.createElement('button');
-      btnComanda.className = 'btn-imprimir-comanda';
-      btnComanda.textContent = 'Imprimir comanda';
-      btnComanda.addEventListener('click', () => {
-        imprimirComanda(ped, productosOrdenados);
-      });
-      card.appendChild(btnComanda);
-
-      if (ped.notaPedido) {
-        const notaDiv = document.createElement('div');
-        notaDiv.className = 'nota-pedido';
-        notaDiv.innerHTML = `<strong>Nota del pedido:</strong> ${ped.notaPedido}`;
-        card.appendChild(notaDiv);
-      }
-
-      productosOrdenados.forEach((prod, idx) => {
-        const prodDiv = document.createElement('div');
-        prodDiv.className = 'producto';
-        if (prod.estadoProducto === 'listo') prodDiv.classList.add('listo');
-
-        const estadoTexto = prod.estadoProducto === 'listo' ? 'LISTO' : 'PREPARANDO';
-        prodDiv.innerHTML = `
-          <div class="nombre">
-            <span>${prod.nombre} <span class="estado-icono">${estadoTexto}</span></span>
-            <span class="precio">$${prod.precio}</span>
-          </div>
-          <div class="ingredientes">${prod.ingredientes || 'Sin ingredientes'}</div>
-          ${prod.nota ? `<div class="nota">Nota: ${prod.nota}</div>` : ''}
-          <div class="acciones-producto">
-            <button class="btn-producto btn-listo" data-pedido="${ped.id}" data-producto="${idx}" ${prod.estadoProducto === 'listo' ? 'disabled' : ''}>Listo</button>
-            <button class="btn-producto btn-cancelar" data-pedido="${ped.id}" data-producto="${idx}">Cancelar</button>
-          </div>
-        `;
-        card.appendChild(prodDiv);
-
-        const btnListo = prodDiv.querySelector('.btn-listo');
-        const btnCancelar = prodDiv.querySelector('.btn-cancelar');
-
-        btnListo.addEventListener('click', async () => {
-          const productos = ped.productos.map((p, i) => {
-            if (i === idx) return { ...p, estadoProducto: 'listo' };
-            return p;
-          });
-          try {
-            await updateDoc(doc(db, 'pedidos', ped.id), { productos });
-          } catch (e) { alert('Error: ' + e.message); }
-        });
-
-        btnCancelar.addEventListener('click', async () => {
-          if (prod.estadoProducto === 'listo') {
-            const productos = ped.productos.map((p, i) => {
-              if (i === idx) return { ...p, estadoProducto: 'preparando' };
-              return p;
-            });
-            try {
-              await updateDoc(doc(db, 'pedidos', ped.id), { productos });
-            } catch (e) { alert('Error: ' + e.message); }
-          } else {
-            const eliminar = confirm('Este producto aun no esta listo. Deseas eliminarlo del pedido?');
-            if (eliminar) {
-              const nuevosProductos = ped.productos.filter((_, i) => i !== idx);
-              try {
-                await updateDoc(doc(db, 'pedidos', ped.id), { productos: nuevosProductos });
-              } catch (e) { alert('Error: ' + e.message); }
-            }
-          }
-        });
-      });
-
-      const todosListos = productosOrdenados.every(p => p.estadoProducto === 'listo');
-      if (todosListos && ped.estadoPedido !== 'listo') {
-        const btnPedidoListo = document.createElement('button');
-        btnPedidoListo.className = 'btn-pedido-listo';
-        btnPedidoListo.textContent = 'Marcar pedido como LISTO';
-        btnPedidoListo.addEventListener('click', async () => {
-          try {
-            await updateDoc(doc(db, 'pedidos', ped.id), { estadoPedido: 'listo' });
-          } catch (e) { alert('Error: ' + e.message); }
-        });
-        card.appendChild(btnPedidoListo);
-      }
-
-      pedidosContainer.appendChild(card);
-    });
-  }
-
   // ================================================================
-  // 🖨️ FUNCION PARA IMPRIMIR COMANDAS (SOLO 1 COPIA)
+  // 🖨️ FUNCION PARA IMPRIMIR COMANDAS (CON PRECIOS Y FORMATO CORREGIDO)
   // ================================================================
   function imprimirComanda(ped, productosOrdenados) {
     const ahora = new Date();
-    const fecha = ahora.toLocaleDateString('es-MX');
+    const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
     const ANCHO = 32;
@@ -390,14 +249,19 @@
 
     productosOrdenados.forEach((prod) => {
       const nombreLimpio = limpiarTexto(prod.nombre);
-      const lineasNombre = dividirTexto(nombreLimpio, ANCHO - 6);
-      lineasNombre.forEach((linea, idx) => {
-        if (idx === 0) {
-          texto += '  [ ] ' + linea + '\r\n';
-        } else {
-          texto += '       ' + linea + '\r\n';
-        }
-      });
+      const precioLimpio = '$' + prod.precio.toFixed(2);
+      const lineasNombre = dividirTexto(nombreLimpio, ANCHO - 6 - precioLimpio.length);
+      
+      if (lineasNombre.length > 0) {
+        const primeraLinea = lineasNombre[0];
+        const espacioRestante = ANCHO - 6 - primeraLinea.length - precioLimpio.length;
+        const espacios = ' '.repeat(Math.max(0, espacioRestante));
+        texto += '  [ ] ' + primeraLinea + espacios + precioLimpio + '\r\n';
+      }
+      
+      for (let i = 1; i < lineasNombre.length; i++) {
+        texto += '       ' + lineasNombre[i] + '\r\n';
+      }
       
       if (prod.nota) {
         const notaLimpia = limpiarTexto('Nota: ' + prod.nota);
@@ -492,7 +356,162 @@
   }
 
   // ================================================================
-  // IMPRIMIR TODAS LAS COMANDAS
+  // 🔥 FUNCION PARA DETECTAR NUEVOS PEDIDOS E IMPRIMIR AUTOMATICAMENTE
+  // ================================================================
+  function iniciarEscucha() {
+    const q = query(collection(db, 'pedidos'), orderBy('fechaHora', 'desc'));
+    onSnapshot(q, (snapshot) => {
+      const pedidos = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.turno === turnoActual && !data.entregado) {
+          pedidos.push({ id: doc.id, ...data });
+        }
+      });
+
+      const idsActuales = pedidos.map(p => p.id);
+      const idsAnteriores = pedidosAnteriores.map(p => p.id);
+      const hayNuevo = idsActuales.some(id => !idsAnteriores.includes(id));
+
+      // 🔥 SI HAY UN NUEVO PEDIDO, REPRODUCIR SONIDO E IMPRIMIR
+      if (hayNuevo && pedidos.length > 0) {
+        reproducirSonido();
+        console.log('🖨️ Nuevo pedido! Imprimiendo automaticamente...');
+        
+        const pedidoNuevo = pedidos.find(p => p.id === idsActuales.find(id => !idsAnteriores.includes(id)));
+        if (pedidoNuevo) {
+          const productosOrdenados = ordenarProductos([...pedidoNuevo.productos]);
+          // Esperar 1 segundo para que la UI se actualice y luego imprimir
+          setTimeout(() => {
+            imprimirComanda(pedidoNuevo, productosOrdenados);
+            console.log('✅ Comanda impresa automáticamente para pedido #' + pedidoNuevo.numeroPedido);
+          }, 1500);
+        }
+      }
+
+      pedidosAnteriores = pedidos;
+      pedidosCache = pedidos;
+      renderPedidos();
+    }, (error) => {
+      console.error('Error en escucha de cocina:', error);
+    });
+  }
+
+  function renderPedidos() {
+    if (pedidosCache.length === 0) {
+      pedidosContainer.innerHTML = '<div class="sin-pedidos">No hay pedidos activos</div>';
+      return;
+    }
+    pedidosContainer.innerHTML = '';
+    pedidosCache.forEach(ped => {
+      const productosOrdenados = ordenarProductos([...ped.productos]);
+
+      const card = document.createElement('div');
+      card.className = 'pedido-card';
+      if (ped.estadoPedido === 'listo') card.classList.add('listo');
+
+      const cabecera = document.createElement('div');
+      cabecera.className = 'cabecera';
+      cabecera.innerHTML = `
+        <span>Pedido #${ped.numeroPedido}</span>
+        <span class="hora">${new Date(ped.fechaHora).toLocaleTimeString()}</span>
+        <span class="estado-pedido ${ped.estadoPedido === 'listo' ? 'listo' : ''}">${ped.estadoPedido === 'listo' ? 'LISTO' : 'EN PREPARACION'}</span>
+      `;
+      card.appendChild(cabecera);
+
+      const totalPedidoDiv = document.createElement('div');
+      totalPedidoDiv.className = 'total-pedido';
+      totalPedidoDiv.textContent = `Total del pedido: $${ped.total.toFixed(2)}`;
+      card.appendChild(totalPedidoDiv);
+
+      const btnComanda = document.createElement('button');
+      btnComanda.className = 'btn-imprimir-comanda';
+      btnComanda.textContent = '🖨️ Imprimir comanda';
+      btnComanda.addEventListener('click', () => {
+        imprimirComanda(ped, productosOrdenados);
+      });
+      card.appendChild(btnComanda);
+
+      if (ped.notaPedido) {
+        const notaDiv = document.createElement('div');
+        notaDiv.className = 'nota-pedido';
+        notaDiv.innerHTML = `<strong>Nota del pedido:</strong> ${ped.notaPedido}`;
+        card.appendChild(notaDiv);
+      }
+
+      productosOrdenados.forEach((prod, idx) => {
+        const prodDiv = document.createElement('div');
+        prodDiv.className = 'producto';
+        if (prod.estadoProducto === 'listo') prodDiv.classList.add('listo');
+
+        const estadoTexto = prod.estadoProducto === 'listo' ? 'LISTO' : 'PREPARANDO';
+        prodDiv.innerHTML = `
+          <div class="nombre">
+            <span>${prod.nombre} <span class="estado-icono">${estadoTexto}</span></span>
+            <span class="precio">$${prod.precio}</span>
+          </div>
+          <div class="ingredientes">${prod.ingredientes || 'Sin ingredientes'}</div>
+          ${prod.nota ? `<div class="nota">Nota: ${prod.nota}</div>` : ''}
+          <div class="acciones-producto">
+            <button class="btn-producto btn-listo" data-pedido="${ped.id}" data-producto="${idx}" ${prod.estadoProducto === 'listo' ? 'disabled' : ''}>Listo</button>
+            <button class="btn-producto btn-cancelar" data-pedido="${ped.id}" data-producto="${idx}">Cancelar</button>
+          </div>
+        `;
+        card.appendChild(prodDiv);
+
+        const btnListo = prodDiv.querySelector('.btn-listo');
+        const btnCancelar = prodDiv.querySelector('.btn-cancelar');
+
+        btnListo.addEventListener('click', async () => {
+          const productos = ped.productos.map((p, i) => {
+            if (i === idx) return { ...p, estadoProducto: 'listo' };
+            return p;
+          });
+          try {
+            await updateDoc(doc(db, 'pedidos', ped.id), { productos });
+          } catch (e) { alert('Error: ' + e.message); }
+        });
+
+        btnCancelar.addEventListener('click', async () => {
+          if (prod.estadoProducto === 'listo') {
+            const productos = ped.productos.map((p, i) => {
+              if (i === idx) return { ...p, estadoProducto: 'preparando' };
+              return p;
+            });
+            try {
+              await updateDoc(doc(db, 'pedidos', ped.id), { productos });
+            } catch (e) { alert('Error: ' + e.message); }
+          } else {
+            const eliminar = confirm('Este producto aun no esta listo. Deseas eliminarlo del pedido?');
+            if (eliminar) {
+              const nuevosProductos = ped.productos.filter((_, i) => i !== idx);
+              try {
+                await updateDoc(doc(db, 'pedidos', ped.id), { productos: nuevosProductos });
+              } catch (e) { alert('Error: ' + e.message); }
+            }
+          }
+        });
+      });
+
+      const todosListos = productosOrdenados.every(p => p.estadoProducto === 'listo');
+      if (todosListos && ped.estadoPedido !== 'listo') {
+        const btnPedidoListo = document.createElement('button');
+        btnPedidoListo.className = 'btn-pedido-listo';
+        btnPedidoListo.textContent = 'Marcar pedido como LISTO';
+        btnPedidoListo.addEventListener('click', async () => {
+          try {
+            await updateDoc(doc(db, 'pedidos', ped.id), { estadoPedido: 'listo' });
+          } catch (e) { alert('Error: ' + e.message); }
+        });
+        card.appendChild(btnPedidoListo);
+      }
+
+      pedidosContainer.appendChild(card);
+    });
+  }
+
+  // ================================================================
+  // IMPRIMIR TODAS LAS COMANDAS (BOTON GENERAL)
   // ================================================================
   btnImprimirComanda.addEventListener('click', () => {
     const pedidosEnPreparacion = pedidosCache.filter(p => p.estadoPedido === 'en_preparacion' || p.estadoPedido === 'listo');
