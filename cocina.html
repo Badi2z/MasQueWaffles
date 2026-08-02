@@ -204,18 +204,6 @@
   }
 
   // ================================================================
-  // FUNCIONES PRINCIPALES
-  // ================================================================
-  async function getTurno() {
-    const docRef = doc(db, 'config', 'turnoActual');
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      turnoActual = docSnap.data().turno || 1;
-      turnoNumSpan.textContent = turnoActual;
-    }
-  }
-
-  // ================================================================
   // 🖨️ FUNCION PARA IMPRIMIR COMANDAS (CON PRECIOS Y FORMATO CORREGIDO)
   // ================================================================
   function imprimirComanda(ped, productosOrdenados) {
@@ -356,7 +344,7 @@
   }
 
   // ================================================================
-  // 🔥 FUNCION PARA DETECTAR NUEVOS PEDIDOS E IMPRIMIR AUTOMATICAMENTE
+  // 🔥 FUNCION PARA DETECTAR NUEVOS PEDIDOS (SOLO SONIDO, SIN IMPRIMIR)
   // ================================================================
   function iniciarEscucha() {
     const q = query(collection(db, 'pedidos'), orderBy('fechaHora', 'desc'));
@@ -373,20 +361,10 @@
       const idsAnteriores = pedidosAnteriores.map(p => p.id);
       const hayNuevo = idsActuales.some(id => !idsAnteriores.includes(id));
 
-      // 🔥 SI HAY UN NUEVO PEDIDO, REPRODUCIR SONIDO E IMPRIMIR
+      // 🔥 SOLO SONIDO, SIN IMPRESION AUTOMATICA
       if (hayNuevo && pedidos.length > 0) {
         reproducirSonido();
-        console.log('🖨️ Nuevo pedido! Imprimiendo automaticamente...');
-        
-        const pedidoNuevo = pedidos.find(p => p.id === idsActuales.find(id => !idsAnteriores.includes(id)));
-        if (pedidoNuevo) {
-          const productosOrdenados = ordenarProductos([...pedidoNuevo.productos]);
-          // Esperar 1 segundo para que la UI se actualice y luego imprimir
-          setTimeout(() => {
-            imprimirComanda(pedidoNuevo, productosOrdenados);
-            console.log('✅ Comanda impresa automáticamente para pedido #' + pedidoNuevo.numeroPedido);
-          }, 1500);
-        }
+        console.log('🔊 Nuevo pedido! Sonido reproducido.');
       }
 
       pedidosAnteriores = pedidos;
