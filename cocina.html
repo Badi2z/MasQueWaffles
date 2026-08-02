@@ -75,7 +75,7 @@
 <div class="header">
   <h1>🍳 MasQueWaffles <span style="font-weight:300;font-size:1.2rem;">Cocina</span></h1>
   <div class="turno">Turno #<span id="turnoNum">1</span></div>
-  <button class="btn-sonido" id="btnActivarSonido">🔊 Activar sonido</button>
+  <button class="btn-sonido" id="btnActivarSonido">🔊 Sonido activado ✅</button>
   <button class="btn-print" id="btnImprimirComanda">🖨️ Comanda</button>
 </div>
 <div id="pedidosContainer" class="pedido-container">
@@ -112,24 +112,17 @@
   let turnoActual = 1;
   let pedidosCache = [];
   let pedidosAnteriores = [];
-  let sonidoActivado = false;
+  let sonidoActivado = true;
 
   // ================================================================
-  // 🔊 FUNCION PARA REPRODUCIR SONIDO (CON ACTIVACION)
+  // 🔊 FUNCION PARA REPRODUCIR SONIDO
   // ================================================================
   function reproducirSonido() {
-    if (!sonidoActivado) {
-      console.log('🔇 Sonido no activado');
-      return;
-    }
-
+    if (!sonidoActivado) return;
     try {
       const audio = new Audio('https://badi2z.github.io/MasQueWaffles/notificacion.mp3');
       audio.volume = 0.8;
-      audio.play().then(() => {
-        console.log('🔊 Sonido reproducido!');
-      }).catch(() => {
-        console.log('⚠️ Error al reproducir sonido, usando beep de respaldo');
+      audio.play().catch(() => {
         try {
           const ctx = new (window.AudioContext || window.webkitAudioContext)();
           const oscillator = ctx.createOscillator();
@@ -141,70 +134,51 @@
           gainNode.gain.value = 0.3;
           oscillator.start(ctx.currentTime);
           oscillator.stop(ctx.currentTime + 0.3);
-        } catch (e2) {
-          console.log('No se pudo reproducir sonido');
-        }
+        } catch (e2) {}
       });
-    } catch (e) {
-      console.log('Error al reproducir sonido:', e);
-    }
+    } catch (e) {}
   }
 
   // ================================================================
-  // 🟢 ACTIVAR SONIDO (BOTON)
+  // 🟢 ACTIVAR SONIDO
   // ================================================================
   btnActivarSonido.addEventListener('click', () => {
     sonidoActivado = !sonidoActivado;
+    btnActivarSonido.textContent = sonidoActivado ? '🔊 Sonido activado ✅' : '🔇 Sonido desactivado ❌';
+    btnActivarSonido.className = sonidoActivado ? 'btn-sonido activo' : 'btn-sonido inactivo';
     if (sonidoActivado) {
-      btnActivarSonido.textContent = '🔊 Sonido activado ✅';
-      btnActivarSonido.className = 'btn-sonido activo';
-      // Probar sonido
       try {
         const audio = new Audio('https://badi2z.github.io/MasQueWaffles/notificacion.mp3');
         audio.volume = 0.8;
         audio.play().catch(() => {});
       } catch (e) {}
-      console.log('🔊 Sonido activado');
-    } else {
-      btnActivarSonido.textContent = '🔇 Sonido desactivado ❌';
-      btnActivarSonido.className = 'btn-sonido inactivo';
-      console.log('🔇 Sonido desactivado');
     }
   });
 
   // ================================================================
-  // FUNCION PARA ORDENAR PRODUCTOS POR GRUPO
+  // FUNCION PARA ORDENAR PRODUCTOS
   // ================================================================
   function ordenarProductos(productos) {
     const ordenGrupos = {
-      'CREPAS': 1,
-      'ALITAS': 2,
-      'BONELESS': 3,
-      'HAMBURGUESAS': 4,
-      'HOT DOGS': 5,
-      'PAPAS Y SALCHICHA': 6,
-      'NUGGETS, PALITOS, AROS': 7,
-      'SOPAS': 8,
-      'FRAPPES': 9,
-      'MALTEADAS': 10,
-      'JELLY COFFEE': 11,
-      'SODA ITALIANA': 12
+      'CREPAS': 1, 'ALITAS': 2, 'BONELESS': 3, 'HAMBURGUESAS': 4,
+      'HOT DOGS': 5, 'PAPAS Y SALCHICHA': 6, 'NUGGETS, PALITOS, AROS': 7,
+      'SOPAS': 8, 'FRAPPES': 9, 'MALTEADAS': 10, 'JELLY COFFEE': 11, 'SODA ITALIANA': 12
     };
 
     function getGrupo(nombre) {
-      const nombreUpper = nombre.toUpperCase();
-      if (nombreUpper.includes('CREPA')) return 'CREPAS';
-      if (nombreUpper.includes('ALITA')) return 'ALITAS';
-      if (nombreUpper.includes('BONELESS')) return 'BONELESS';
-      if (nombreUpper.includes('HAMBURGUESA')) return 'HAMBURGUESAS';
-      if (nombreUpper.includes('HOT DOG')) return 'HOT DOGS';
-      if (nombreUpper.includes('PAPAS') || nombreUpper.includes('SALCHIPAPAS') || nombreUpper.includes('SALCHIPULPOS')) return 'PAPAS Y SALCHICHA';
-      if (nombreUpper.includes('NUGGETS') || nombreUpper.includes('PALITOS') || nombreUpper.includes('AROS') || nombreUpper.includes('SINCRONIZADA')) return 'NUGGETS, PALITOS, AROS';
-      if (nombreUpper.includes('SOPA') || nombreUpper.includes('BULDAK') || nombreUpper.includes('RAMEN')) return 'SOPAS';
-      if (nombreUpper.includes('FRAPPE')) return 'FRAPPES';
-      if (nombreUpper.includes('MALTEADA')) return 'MALTEADAS';
-      if (nombreUpper.includes('JELLY')) return 'JELLY COFFEE';
-      if (nombreUpper.includes('SODA')) return 'SODA ITALIANA';
+      const n = nombre.toUpperCase();
+      if (n.includes('CREPA')) return 'CREPAS';
+      if (n.includes('ALITA')) return 'ALITAS';
+      if (n.includes('BONELESS')) return 'BONELESS';
+      if (n.includes('HAMBURGUESA')) return 'HAMBURGUESAS';
+      if (n.includes('HOT DOG')) return 'HOT DOGS';
+      if (n.includes('PAPAS') || n.includes('SALCHIPAPAS') || n.includes('SALCHIPULPOS')) return 'PAPAS Y SALCHICHA';
+      if (n.includes('NUGGETS') || n.includes('PALITOS') || n.includes('AROS') || n.includes('SINCRONIZADA')) return 'NUGGETS, PALITOS, AROS';
+      if (n.includes('SOPA') || n.includes('BULDAK') || n.includes('RAMEN')) return 'SOPAS';
+      if (n.includes('FRAPPE')) return 'FRAPPES';
+      if (n.includes('MALTEADA')) return 'MALTEADAS';
+      if (n.includes('JELLY')) return 'JELLY COFFEE';
+      if (n.includes('SODA')) return 'SODA ITALIANA';
       return 'OTROS';
     }
 
@@ -219,108 +193,145 @@
   }
 
   // ================================================================
-  // FUNCION PRINCIPAL PARA LIMPIAR TEXTO
-  // ================================================================
-  function limpiarTexto(texto) {
-    if (!texto) return '';
-    let limpio = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    limpio = limpio.replace(/[^\x00-\x7F]/g, '');
-    limpio = limpio.replace(/[^a-zA-Z0-9 .,\-$()]/g, ' ');
-    return limpio.trim();
-  }
-
-  // ================================================================
-  // FUNCION PARA DIVIDIR TEXTO
-  // ================================================================
-  function dividirTexto(texto, maxLen) {
-    const palabras = texto.split(' ');
-    const lineas = [];
-    let lineaActual = '';
-    
-    for (let palabra of palabras) {
-      if ((lineaActual + ' ' + palabra).length <= maxLen) {
-        lineaActual += (lineaActual ? ' ' : '') + palabra;
-      } else {
-        if (lineaActual) lineas.push(lineaActual);
-        lineaActual = palabra;
-      }
-    }
-    if (lineaActual) lineas.push(lineaActual);
-    return lineas;
-  }
-
-  // ================================================================
-  // 🖨️ FUNCION PARA IMPRIMIR COMANDAS
+  // 🖨️ FUNCION PARA IMPRIMIR COMANDAS (VERSION BPRINT)
   // ================================================================
   function imprimirComanda(ped, productosOrdenados) {
+    // Obtener fecha y hora
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    const ANCHO = 32;
-    let texto = '';
+    // Construir los datos del pedido para enviar a response.html
+    const data = {
+      numeroPedido: ped.numeroPedido,
+      hora: hora,
+      fecha: fecha,
+      productos: productosOrdenados,
+      total: ped.total,
+      notaPedido: ped.notaPedido || ''
+    };
 
-    function centrar(t) {
-      const limpio = limpiarTexto(t);
-      const espacios = Math.max(0, Math.floor((ANCHO - limpio.length) / 2));
-      return ' '.repeat(espacios) + limpio;
-    }
+    // Codificar datos como JSON
+    const jsonData = encodeURIComponent(JSON.stringify(data));
 
-    function linea(t) {
-      const limpio = limpiarTexto(t);
-      if (limpio.length > ANCHO) return limpio.substring(0, ANCHO);
-      return limpio.padEnd(ANCHO, ' ');
-    }
+    // Construir la URL de respuesta con los datos
+    const baseUrl = 'https://badi2z.github.io/MasQueWaffles/response.html';
+    const urlResponse = baseUrl + '?data=' + jsonData;
 
-    texto += '================================\r\n';
-    texto += centrar('MasQueWaffles') + '\r\n';
-    texto += centrar('Comanda') + '\r\n';
-    texto += '================================\r\n';
-    texto += linea('Pedido #' + ped.numeroPedido + ' ' + hora) + '\r\n';
-    texto += '--------------------------------\r\n';
-    texto += ' PRODUCTOS\r\n';
+    // ================================================================
+    // 🟢 METODO 1: bprint:// (para iOS y Android)
+    // ================================================================
+    const bprintUrl = 'bprint://' + urlResponse;
+
+    // ================================================================
+    // 🟢 METODO 2: Intent para Android (alternativa)
+    // ================================================================
+    const intentUrl = 'intent://' + urlResponse + '#Intent;scheme=bprint;action=android.intent.action.VIEW;end';
+
+    // ================================================================
+    // 🟢 METODO 3: Thermer (alternativa)
+    // ================================================================
+    // Crear el array de entradas para Thermer
+    let printEntries = [];
+    
+    // Título
+    printEntries.push({ type: 0, content: 'MasQueWaffles', bold: 1, align: 1, format: 1 });
+    printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
+    printEntries.push({ type: 0, content: 'Pedido #' + ped.numeroPedido + '  ' + hora, bold: 1, align: 0, format: 0 });
+    printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
 
     productosOrdenados.forEach((prod) => {
-      const nombreLimpio = limpiarTexto(prod.nombre);
-      const precioLimpio = '$' + prod.precio.toFixed(2);
-      const lineasNombre = dividirTexto(nombreLimpio, ANCHO - 6 - precioLimpio.length);
-      
-      if (lineasNombre.length > 0) {
-        const primeraLinea = lineasNombre[0];
-        const espacioRestante = ANCHO - 6 - primeraLinea.length - precioLimpio.length;
-        const espacios = ' '.repeat(Math.max(0, espacioRestante));
-        texto += '  [ ] ' + primeraLinea + espacios + precioLimpio + '\r\n';
-      }
-      
-      for (let i = 1; i < lineasNombre.length; i++) {
-        texto += '       ' + lineasNombre[i] + '\r\n';
-      }
-      
+      printEntries.push({ type: 0, content: '  [ ] ' + prod.nombre + ' - $' + prod.precio.toFixed(2), bold: 0, align: 0, format: 0 });
       if (prod.nota) {
-        const notaLimpia = limpiarTexto('Nota: ' + prod.nota);
-        const lineasNota = dividirTexto(notaLimpia, ANCHO - 4);
-        lineasNota.forEach(linea => {
-          texto += '     ' + linea + '\r\n';
-        });
+        printEntries.push({ type: 0, content: '   Nota: ' + prod.nota, bold: 0, align: 0, format: 0 });
       }
     });
 
     if (ped.notaPedido) {
-      const notaPedidoLimpia = limpiarTexto('Nota: ' + ped.notaPedido);
-      const lineasNotaPedido = dividirTexto(notaPedidoLimpia, ANCHO - 2);
-      texto += '\r\n';
-      lineasNotaPedido.forEach(linea => {
-        texto += '  ' + linea + '\r\n';
-      });
+      printEntries.push({ type: 0, content: 'Nota: ' + ped.notaPedido, bold: 0, align: 0, format: 0 });
     }
 
-    texto += '--------------------------------\r\n';
-    texto += linea('Total: $' + ped.total.toFixed(2)) + '\r\n';
-    texto += centrar(fecha) + '\r\n';
-    texto += '================================\r\n';
-    texto += '\r\n';
+    printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
+    printEntries.push({ type: 0, content: 'Total: $' + ped.total.toFixed(2), bold: 1, align: 1, format: 1 });
+    printEntries.push({ type: 0, content: fecha, bold: 0, align: 1, format: 0 });
 
-    const ventana = window.open('', '_blank', 'width=400,height=600');
+    const thermerJson = JSON.stringify(printEntries);
+    const thermerUrl = 'thermer://print?data=' + encodeURIComponent(thermerJson);
+
+    // ================================================================
+    // 🚀 PROBAR TODOS LOS METODOS (el que funcione, se quedará)
+    // ================================================================
+
+    // Mostrar opciones al usuario
+    const opcion = confirm(
+      '🖨️ Selecciona el método de impresión:\n\n' +
+      '✅ "Aceptar" → Abrir con bprint:// (recomendado)\n' +
+      '❌ "Cancelar" → Copiar texto manualmente'
+    );
+
+    if (opcion) {
+      // Intentar primero con bprint://
+      try {
+        window.location.href = bprintUrl;
+        console.log('🔗 Intentando bprint://', bprintUrl);
+        
+        // Si después de 2 segundos no funciona, intentar con Thermer
+        setTimeout(() => {
+          try {
+            window.location.href = thermerUrl;
+            console.log('🔗 Intentando thermer://', thermerUrl);
+          } catch (e) {}
+        }, 1500);
+
+        // Si después de 3 segundos no funciona, mostrar mensaje
+        setTimeout(() => {
+          alert('⚠️ Si la app no se abrió automáticamente:\n\n' +
+                '1. Abre "Bluetooth Print" o "Thermer"\n' +
+                '2. Pega el texto manualmente\n' +
+                '3. O usa el método de copiar/pegar');
+        }, 3000);
+      } catch (e) {
+        alert('❌ Error al abrir la app. Usa el método manual.');
+        // Mostrar el texto para copiar
+        mostrarTextoManual(ped, productosOrdenados, fecha, hora);
+      }
+    } else {
+      // Método manual
+      mostrarTextoManual(ped, productosOrdenados, fecha, hora);
+    }
+  }
+
+  // ================================================================
+  // 📋 FUNCION PARA MOSTRAR TEXTO MANUAL (copiar/pegar)
+  // ================================================================
+  function mostrarTextoManual(ped, productosOrdenados, fecha, hora) {
+    let texto = '';
+    texto += '================================\n';
+    texto += '       MasQueWaffles\n';
+    texto += '          Comanda\n';
+    texto += '================================\n';
+    texto += 'Pedido #' + ped.numeroPedido + '  ' + hora + '\n';
+    texto += '--------------------------------\n';
+    texto += ' PRODUCTOS\n';
+
+    productosOrdenados.forEach((prod) => {
+      texto += '  [ ] ' + prod.nombre + ' - $' + prod.precio.toFixed(2) + '\n';
+      if (prod.nota) {
+        texto += '   Nota: ' + prod.nota + '\n';
+      }
+    });
+
+    if (ped.notaPedido) {
+      texto += '\nNota: ' + ped.notaPedido + '\n';
+    }
+
+    texto += '--------------------------------\n';
+    texto += 'Total: $' + ped.total.toFixed(2) + '\n';
+    texto += '         ' + fecha + '\n';
+    texto += '================================\n';
+
+    // Abrir ventana con el texto
+    const ventana = window.open('', '_blank', 'width=400,height=500');
     ventana.document.write(`
       <!DOCTYPE html>
       <html>
@@ -331,27 +342,55 @@
             font-family: 'Courier New', monospace; 
             background: white; 
             color: black; 
-            padding: 0; 
+            padding: 20px; 
             margin: 0;
+            white-space: pre-wrap;
+            font-size: 14pt;
             max-width: 80mm;
-            margin: 0 auto;
           }
-          @page { size: 80mm 297mm; margin: 0mm; }
-          @media print { body { padding: 0; margin: 0; } .no-print { display: none !important; } }
-          .no-print { text-align: center; padding: 8px; border-top: 1px solid #ccc; font-family: Arial, sans-serif; max-width: 80mm; }
-          .no-print button { padding: 6px 16px; border: none; border-radius: 20px; font-size: 0.8rem; cursor: pointer; margin: 0 4px; }
-          .btn-print { background: #2196f3; color: white; }
-          .btn-close { background: #ccc; color: #333; }
-          pre { margin: 0; padding: 2mm 2mm; font-family: 'Courier New', monospace; font-size: 9pt; line-height: 1.3; white-space: pre-wrap; word-wrap: break-word; }
+          .btn-copiar {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin: 10px;
+            width: 90%;
+          }
+          .btn-copiar:active { transform: scale(0.96); }
+          .no-print { text-align: center; padding: 10px; border-top: 1px solid #ccc; }
+          pre { margin: 0; }
         </style>
       </head>
       <body>
         <pre>${texto}</pre>
         <div class="no-print">
-          <button class="btn-print" onclick="window.print()">Imprimir</button>
-          <button class="btn-close" onclick="window.close()">Cerrar</button>
+          <button class="btn-copiar" onclick="copiarTexto()">📋 Copiar texto</button>
+          <div style="font-size:0.8rem;color:#999;margin-top:8px;">
+            1. Copia el texto<br>
+            2. Abre la app de impresión<br>
+            3. Pega y envía a imprimir
+          </div>
         </div>
-        <script>setTimeout(function() { window.print(); }, 800);<\/script>
+        <script>
+          function copiarTexto() {
+            const texto = \`${texto}\`;
+            navigator.clipboard.writeText(texto).then(() => {
+              alert('✅ Texto copiado al portapapeles');
+            }).catch(() => {
+              // Método alternativo
+              const textarea = document.createElement('textarea');
+              textarea.value = \`${texto}\`;
+              document.body.appendChild(textarea);
+              textarea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textarea);
+              alert('✅ Texto copiado al portapapeles');
+            });
+          }
+        <\/script>
       </body>
       </html>
     `);
@@ -359,12 +398,23 @@
   }
 
   // ================================================================
-  // 🔥 FUNCION PARA DETECTAR NUEVOS PEDIDOS (CON SONIDO)
+  // 🔥 DETECTAR NUEVOS PEDIDOS
   // ================================================================
+  async function getTurno() {
+    try {
+      const docRef = doc(db, 'config', 'turnoActual');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        turnoActual = docSnap.data().turno || 1;
+        turnoNumSpan.textContent = turnoActual;
+      }
+    } catch (error) {
+      console.error('Error al obtener turno:', error);
+    }
+  }
+
   function iniciarEscucha() {
     getTurno().then(() => {
-      console.log('📡 Escuchando pedidos del turno:', turnoActual);
-      
       const q = query(collection(db, 'pedidos'), orderBy('fechaHora', 'desc'));
       onSnapshot(q, (snapshot) => {
         const pedidos = [];
@@ -379,9 +429,7 @@
         const idsAnteriores = pedidosAnteriores.map(p => p.id);
         const hayNuevo = idsActuales.some(id => !idsAnteriores.includes(id));
 
-        // 🔥 SI HAY NUEVO PEDIDO, REPRODUCIR SONIDO
         if (hayNuevo && pedidos.length > 0) {
-          console.log('🔊 Nuevo pedido detectado!');
           reproducirSonido();
         }
 
@@ -389,36 +437,11 @@
         pedidosCache = pedidos;
         renderPedidos();
       }, (error) => {
-        console.error('❌ Error en escucha de cocina:', error);
+        console.error('Error en escucha de cocina:', error);
       });
     });
   }
 
-  // ================================================================
-  // 🟢 FUNCION PARA OBTENER EL TURNO ACTUAL
-  // ================================================================
-  async function getTurno() {
-    try {
-      const docRef = doc(db, 'config', 'turnoActual');
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        turnoActual = docSnap.data().turno || 1;
-        turnoNumSpan.textContent = turnoActual;
-        console.log('✅ Turno actual:', turnoActual);
-      } else {
-        turnoActual = 1;
-        turnoNumSpan.textContent = turnoActual;
-      }
-    } catch (error) {
-      console.error('❌ Error al obtener turno:', error);
-      turnoActual = 1;
-      turnoNumSpan.textContent = turnoActual;
-    }
-  }
-
-  // ================================================================
-  // 🟢 FUNCION PARA RENDERIZAR PEDIDOS
-  // ================================================================
   function renderPedidos() {
     if (pedidosCache.length === 0) {
       pedidosContainer.innerHTML = '<div class="sin-pedidos">No hay pedidos activos</div>';
@@ -551,19 +574,15 @@
   });
 
   // ================================================================
-  // 🔥 INICIALIZACION CON AUTENTICACION
+  // 🔥 INICIALIZACION
   // ================================================================
   signInAnonymously(auth)
     .then(() => {
       console.log('✅ Conectado a Firebase (Cocina)');
-      // Activar sonido por defecto
-      sonidoActivado = true;
-      btnActivarSonido.textContent = '🔊 Sonido activado ✅';
-      btnActivarSonido.className = 'btn-sonido activo';
       iniciarApp();
     })
     .catch((error) => {
-      console.error('❌ Error de autenticacion:', error);
+      console.error('Error de autenticacion:', error);
       alert('No se pudo conectar con la base de datos.');
     });
 

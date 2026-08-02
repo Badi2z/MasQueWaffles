@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comanda JSON</title>
+  <style>
+    body { 
+      font-family: 'Courier New', monospace; 
+      background: #f5f5f5; 
+      color: #333; 
+      padding: 20px; 
+      max-width: 800px; 
+      margin: 0 auto;
+    }
+    pre {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .info {
+      background: #e8f5e9;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border-left: 4px solid #4caf50;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📄 Página de Respuesta</h1>
+  <div class="info">
+    <strong>🔵 Esta página genera el JSON que la app "Bluetooth Print" necesita.</strong><br>
+    <span style="font-size:0.9rem;color:#666;">Recibe los datos del pedido por URL y los devuelve en formato JSON.</span>
+  </div>
+
+  <div id="output">
+    <pre id="jsonOutput">Cargando...</pre>
+  </div>
+
+  <script>
+    // ================================================================
+    // 📄 PAGINA DE RESPUESTA PARA BLUETOOTH PRINT APP
+    // ================================================================
+
+    // Obtener los datos de la URL
+    function getParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+
+    // Decodificar los datos
+    const dataParam = getParam('data');
+    let pedidoData = null;
+
+    if (dataParam) {
+      try {
+        pedidoData = JSON.parse(decodeURIComponent(dataParam));
+        console.log('📦 Datos recibidos:', pedidoData);
+      } catch (e) {
+        console.error('❌ Error al decodificar datos:', e);
+        pedidoData = null;
+      }
+    }
+
+    // Si no hay datos, usar datos de prueba
+    if (!pedidoData) {
+      pedidoData = {
+        numeroPedido: 4,
+        hora: "02:28 p.m.",
+        fecha: "2/8/2026",
+        productos: [
+          { nombre: "Alitas BBQ", precio: 67, ingredientes: "", nota: "", estadoProducto: "listo" },
+          { nombre: "Alitas BBQ", precio: 67, ingredientes: "", nota: "", estadoProducto: "listo" },
+          { nombre: "Hamburguesa Clasica", precio: 70, ingredientes: "", nota: "", estadoProducto: "listo" },
+          { nombre: "Papas Francesas", precio: 42, ingredientes: "", nota: "", estadoProducto: "listo" },
+          { nombre: "Papas Francesas", precio: 42, ingredientes: "", nota: "", estadoProducto: "listo" }
+        ],
+        total: 288,
+        notaPedido: "Sin cebolla"
+      };
+      console.log('⚠️ Usando datos de prueba');
+    }
+
+    // ================================================================
+    // CONSTRUIR EL ARRAY DE ENTRADAS PARA LA APP
+    // ================================================================
+    function generarComandaJSON(pedido) {
+      let a = [];
+
+      // 1. Título (centrado, negrita, doble altura)
+      a.push({ type: 0, content: 'MasQueWaffles', bold: 1, align: 1, format: 1 });
+
+      // 2. Línea separadora
+      a.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
+
+      // 3. Pedido y hora
+      a.push({ type: 0, content: 'Pedido #' + pedido.numeroPedido + '  ' + pedido.hora, bold: 1, align: 0, format: 0 });
+
+      // 4. Línea separadora
+      a.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
+
+      // 5. Productos
+      pedido.productos.forEach((prod) => {
+        a.push({ type: 0, content: '  [ ] ' + prod.nombre + ' - $' + prod.precio.toFixed(2), bold: 0, align: 0, format: 0 });
+        if (prod.nota) {
+          a.push({ type: 0, content: '   Nota: ' + prod.nota, bold: 0, align: 0, format: 0 });
+        }
+      });
+
+      // 6. Nota del pedido (si existe)
+      if (pedido.notaPedido) {
+        a.push({ type: 0, content: 'Nota: ' + pedido.notaPedido, bold: 0, align: 0, format: 0 });
+      }
+
+      // 7. Línea separadora
+      a.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
+
+      // 8. Total (centrado, negrita)
+      a.push({ type: 0, content: 'Total: $' + pedido.total.toFixed(2), bold: 1, align: 1, format: 1 });
+
+      // 9. Fecha (centrado)
+      a.push({ type: 0, content: pedido.fecha, bold: 0, align: 1, format: 0 });
+
+      return a;
+    }
+
+    // ================================================================
+    // GENERAR Y MOSTRAR EL JSON
+    // ================================================================
+    const jsonArray = generarComandaJSON(pedidoData);
+    const jsonString = JSON.stringify(jsonArray);
+
+    // Mostrar en la página
+    document.getElementById('jsonOutput').textContent = jsonString;
+
+    // También intentar imprimir directamente si la app lo solicita
+    console.log('📤 JSON generado:', jsonString);
+
+    // Si la app solicita el JSON, lo devolvemos
+    // (La app hace una petición HTTP a esta página)
+  </script>
+</body>
+</html>
