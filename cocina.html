@@ -63,6 +63,21 @@
     .nota-pedido strong { color: #ffa726; }
     .btn-imprimir-comanda { background: #2196f3; color: white; border: none; padding: 10px 16px; border-radius: 30px; font-weight: bold; font-size: 0.9rem; cursor: pointer; margin-top: 8px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
     .btn-imprimir-comanda:active { transform: scale(0.96); }
+    .btn-bluetooth {
+      background: #0084FF;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 30px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      cursor: pointer;
+      margin-top: 4px;
+      display: inline-block;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .btn-bluetooth:active { transform: scale(0.96); }
+    .btn-bluetooth.conectado { background: #4caf50; }
     /* Modal de selección de impresión */
     .modal-overlay {
       position: fixed;
@@ -212,6 +227,13 @@
   let productosSeleccionados = null;
 
   // ================================================================
+  // 🔵 VARIABLES PARA WEB BLUETOOTH
+  // ================================================================
+  let dispositivoBT = null;
+  let caracteristicaBT = null;
+  let servidorBT = null;
+
+  // ================================================================
   // 🔊 FUNCION PARA REPRODUCIR SONIDO
   // ================================================================
   function reproducirSonido() {
@@ -326,6 +348,59 @@
   }
 
   // ================================================================
+  // 🔵 FUNCION PARA CONECTAR BLUETOOTH
+  // ================================================================
+  async function conectarBluetooth() {
+    try {
+      if (dispositivoBT) {
+        // Ya está conectado, desconectar
+        try {
+          if (servidorBT) await servidorBT.disconnect();
+        } catch (e) {}
+        dispositivoBT = null;
+        caracteristicaBT = null;
+        servidorBT = null;
+        return 'desconectado';
+      }
+
+      // Buscar dispositivo
+      dispositivoBT = await navigator.bluetooth.requestDevice({
+        filters: [
+          { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
+          { namePrefix: 'Printer' },
+          { namePrefix: 'POS' },
+          { namePrefix: 'BT' },
+          { namePrefix: 'GLPrinter' }
+        ],
+        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+      });
+
+      if (!dispositivoBT) {
+        return 'cancelado';
+      }
+
+      // Conectar al servidor GATT
+      servidorBT = await dispositivoBT.gatt.connect();
+      
+      // Obtener el servicio de impresión
+      const service = await servidorBT.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+      
+      // Obtener la característica de impresión
+      caracteristicaBT = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+
+      console.log('✅ Conectado a:', dispositivoBT.name);
+      return 'conectado';
+
+    } catch (error) {
+      console.error('Error de Bluetooth:', error);
+      dispositivoBT = null;
+      caracteristicaBT = null;
+      servidorBT = null;
+      throw error;
+    }
+  }
+
+  // ================================================================
   // 🖨️ METODO 1: PC (USB / Impresión normal)
   // ================================================================
   function imprimirPC(ped, productosOrdenados) {
@@ -411,31 +486,31 @@
   // ================================================================
   // 🖨️ METODO 3: Android (Web Bluetooth)
   // ================================================================
-  let dispositivoBT = null;
-  let caracteristicaBT = null;
-
   async function imprimirAndroid(ped, productosOrdenados) {
     const texto = generarTextoComanda(ped, productosOrdenados);
 
     try {
+      // Verificar que el navegador soporte Web Bluetooth
+      if (!navigator.bluetooth) {
+        alert('❌ Web Bluetooth no está disponible en este navegador.\n\nUsa Chrome en Android.');
+        return;
+      }
+
       // Si no está conectado, pedir conexión
       if (!dispositivoBT) {
-        dispositivoBT = await navigator.bluetooth.requestDevice({
-          filters: [
-            { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
-            { namePrefix: 'Printer' },
-            { namePrefix: 'POS' },
-            { namePrefix: 'BT' },
-            { namePrefix: 'GLPrinter' }
-          ],
-          optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
-        });
-
-        const server = await dispositivoBT.gatt.connect();
-        const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-        caracteristicaBT = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-
+        const resultado = await conectarBluetooth();
+        if (resultado === 'cancelado') return;
+        if (resultado !== 'conectado') {
+          alert('❌ No se pudo conectar a la impresora.');
+          return;
+        }
         alert('✅ Conectado a: ' + (dispositivoBT.name || 'Impresora'));
+      }
+
+      // Verificar que tengamos la característica
+      if (!caracteristicaBT) {
+        alert('❌ Error: No se pudo obtener la característica de impresión.');
+        return;
       }
 
       // Enviar texto
@@ -443,21 +518,26 @@
       const data = encoder.encode(texto + '\n\n\n');
       await caracteristicaBT.writeValue(data);
 
-      // Enviar corte
+      // Enviar comando de corte
       setTimeout(async () => {
         try {
           const corte = new Uint8Array([0x1B, 0x69]);
           await caracteristicaBT.writeValue(corte);
-        } catch (e) {}
+          console.log('✂️ Comando de corte enviado');
+        } catch (e) {
+          console.log('No se pudo enviar corte');
+        }
       }, 500);
 
       alert('✅ ¡Comanda enviada a la impresora!');
 
     } catch (error) {
-      console.error('Error:', error);
-      alert('❌ Error al imprimir. Asegúrate de que la impresora esté encendida y visible.\n\n' + error.message);
+      console.error('Error al imprimir:', error);
+      alert('❌ Error al imprimir.\n\n' + error.message);
+      // Si hay error, reiniciar la conexión
       dispositivoBT = null;
       caracteristicaBT = null;
+      servidorBT = null;
     }
   }
 
@@ -497,14 +577,10 @@
     }
   });
 
-  opcionAndroid.addEventListener('click', () => {
+  opcionAndroid.addEventListener('click', async () => {
     modalImpresion.classList.remove('visible');
     if (pedidoSeleccionado && productosSeleccionados) {
-      if (!navigator.bluetooth) {
-        alert('❌ Web Bluetooth no está disponible en este navegador.\n\nUsa Chrome en Android.');
-        return;
-      }
-      imprimirAndroid(pedidoSeleccionado, productosSeleccionados);
+      await imprimirAndroid(pedidoSeleccionado, productosSeleccionados);
     }
   });
 
@@ -678,7 +754,7 @@
       return;
     }
 
-    // Imprimir el primero de la lista
+    // Abrir el modal con el primer pedido
     const ped = pedidosEnPreparacion[0];
     const productosOrdenados = ordenarProductos([...ped.productos]);
     abrirModalImpresion(ped, productosOrdenados);
