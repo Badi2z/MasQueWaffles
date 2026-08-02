@@ -63,6 +63,71 @@
     .nota-pedido strong { color: #ffa726; }
     .btn-imprimir-comanda { background: #2196f3; color: white; border: none; padding: 10px 16px; border-radius: 30px; font-weight: bold; font-size: 0.9rem; cursor: pointer; margin-top: 8px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
     .btn-imprimir-comanda:active { transform: scale(0.96); }
+    /* Modal de selección de impresión */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      padding: 20px;
+      backdrop-filter: blur(5px);
+    }
+    .modal-overlay.visible { display: flex; }
+    .modal {
+      background: #1e1e1e;
+      border-radius: 30px;
+      max-width: 450px;
+      width: 100%;
+      padding: 30px 24px;
+      max-height: 95vh;
+      overflow-y: auto;
+      border: 1px solid #333;
+    }
+    .modal h2 {
+      color: #fff;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .modal .opcion {
+      display: block;
+      padding: 16px 20px;
+      background: #2a2a2a;
+      border-radius: 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      text-align: center;
+      font-weight: 600;
+      border: 2px solid transparent;
+      color: #fff;
+      transition: all 0.2s;
+      width: 100%;
+      font-size: 1rem;
+    }
+    .modal .opcion:active { transform: scale(0.96); background: #333; }
+    .modal .opcion .icono { font-size: 1.8rem; display: block; margin-bottom: 4px; }
+    .modal .opcion .descripcion { font-size: 0.8rem; color: #888; font-weight: 300; }
+    .modal .btn-cerrar {
+      background: #333;
+      color: #fff;
+      border: none;
+      border-radius: 30px;
+      padding: 12px;
+      width: 100%;
+      margin-top: 8px;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .modal .btn-cerrar:active { transform: scale(0.96); }
+    .modal .opcion.pc { border-color: #2196f3; }
+    .modal .opcion.ios { border-color: #0084FF; }
+    .modal .opcion.android { border-color: #4caf50; }
     @media (max-width: 600px) {
       .pedido-card .cabecera { font-size: 1.2rem; }
       .pedido-card .producto .nombre { font-size: 1.2rem; }
@@ -80,6 +145,29 @@
 </div>
 <div id="pedidosContainer" class="pedido-container">
   <div class="sin-pedidos">⏳ Esperando pedidos...</div>
+</div>
+
+<!-- ===== MODAL DE SELECCIÓN DE IMPRESIÓN ===== -->
+<div class="modal-overlay" id="modalImpresion">
+  <div class="modal">
+    <h2>🖨️ Selecciona método</h2>
+    <button class="opcion pc" id="opcionPC">
+      <span class="icono">💻</span>
+      PC (USB / Escritorio)
+      <span class="descripcion">Imprime desde la ventana del navegador</span>
+    </button>
+    <button class="opcion ios" id="opcionIOS">
+      <span class="icono">📱</span>
+      iOS (Thermer)
+      <span class="descripcion">Usa la app Thermer en iPhone/iPad</span>
+    </button>
+    <button class="opcion android" id="opcionAndroid">
+      <span class="icono">📱</span>
+      Android (Web Bluetooth)
+      <span class="descripcion">Conecta directamente por Bluetooth</span>
+    </button>
+    <button class="btn-cerrar" id="btnCerrarModal">Cancelar</button>
+  </div>
 </div>
 
 <script type="module">
@@ -109,10 +197,19 @@
   const btnImprimirComanda = document.getElementById('btnImprimirComanda');
   const btnActivarSonido = document.getElementById('btnActivarSonido');
 
+  // Modal
+  const modalImpresion = document.getElementById('modalImpresion');
+  const btnCerrarModal = document.getElementById('btnCerrarModal');
+  const opcionPC = document.getElementById('opcionPC');
+  const opcionIOS = document.getElementById('opcionIOS');
+  const opcionAndroid = document.getElementById('opcionAndroid');
+
   let turnoActual = 1;
   let pedidosCache = [];
   let pedidosAnteriores = [];
   let sonidoActivado = true;
+  let pedidoSeleccionado = null;
+  let productosSeleccionados = null;
 
   // ================================================================
   // 🔊 FUNCION PARA REPRODUCIR SONIDO
@@ -193,227 +290,13 @@
   }
 
   // ================================================================
-  // 🖨️ FUNCION PARA IMPRIMIR COMANDAS (CORREGIDA PARA IOS)
+  // 📋 FUNCION PARA GENERAR TEXTO DE LA COMANDA
   // ================================================================
-  function imprimirComanda(ped, productosOrdenados) {
+  function generarTextoComanda(ped, productosOrdenados) {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    // ================================================================
-    // CONSTRUIR EL ARRAY DE ENTRADAS PARA THERMER
-    // ================================================================
-    let printEntries = [];
-
-    // Título
-    printEntries.push({ 
-      type: 0, 
-      content: 'MasQueWaffles', 
-      bold: 1, 
-      align: 1, 
-      format: 1 
-    });
-
-    // Línea separadora
-    printEntries.push({ 
-      type: 0, 
-      content: '----------------------------', 
-      bold: 0, 
-      align: 0, 
-      format: 0 
-    });
-
-    // Pedido y hora
-    printEntries.push({ 
-      type: 0, 
-      content: 'Pedido #' + ped.numeroPedido + '  ' + hora, 
-      bold: 1, 
-      align: 0, 
-      format: 0 
-    });
-
-    // Línea separadora
-    printEntries.push({ 
-      type: 0, 
-      content: '----------------------------', 
-      bold: 0, 
-      align: 0, 
-      format: 0 
-    });
-
-    // PRODUCTOS
-    productosOrdenados.forEach((prod) => {
-      printEntries.push({ 
-        type: 0, 
-        content: '  [ ] ' + prod.nombre + ' - $' + prod.precio.toFixed(2), 
-        bold: 0, 
-        align: 0, 
-        format: 0 
-      });
-      if (prod.nota) {
-        printEntries.push({ 
-          type: 0, 
-          content: '   Nota: ' + prod.nota, 
-          bold: 0, 
-          align: 0, 
-          format: 0 
-        });
-      }
-    });
-
-    // Nota del pedido
-    if (ped.notaPedido) {
-      printEntries.push({ 
-        type: 0, 
-        content: 'Nota: ' + ped.notaPedido, 
-        bold: 0, 
-        align: 0, 
-        format: 0 
-      });
-    }
-
-    // Línea separadora
-    printEntries.push({ 
-      type: 0, 
-      content: '----------------------------', 
-      bold: 0, 
-      align: 0, 
-      format: 0 
-    });
-
-    // Total
-    printEntries.push({ 
-      type: 0, 
-      content: 'Total: $' + ped.total.toFixed(2), 
-      bold: 1, 
-      align: 1, 
-      format: 1 
-    });
-
-    // Fecha
-    printEntries.push({ 
-      type: 0, 
-      content: fecha, 
-      bold: 0, 
-      align: 1, 
-      format: 0 
-    });
-
-    // ================================================================
-    // GENERAR JSON
-    // ================================================================
-    const jsonData = JSON.stringify(printEntries);
-    
-    // Verificar que el JSON sea válido
-    try {
-      JSON.parse(jsonData);
-      console.log('✅ JSON válido');
-    } catch (e) {
-      console.error('❌ JSON inválido:', e);
-      alert('Error al generar el JSON. Usa el método manual.');
-      mostrarTextoManual(ped, productosOrdenados, fecha, hora);
-      return;
-    }
-
-    // Codificar para URL
-    const encodedData = encodeURIComponent(jsonData);
-
-    // ================================================================
-    // 🟢 METODO 1: Thermer (iOS/Android)
-    // ================================================================
-    const thermerUrl = 'thermer://print?data=' + encodedData;
-
-    // ================================================================
-    // 🟢 METODO 2: bprint:// (Android)
-    // ================================================================
-    let textoSimple = '';
-    textoSimple += '================================\n';
-    textoSimple += '       MasQueWaffles\n';
-    textoSimple += '          Comanda\n';
-    textoSimple += '================================\n';
-    textoSimple += 'Pedido #' + ped.numeroPedido + '  ' + hora + '\n';
-    textoSimple += '--------------------------------\n';
-    textoSimple += ' PRODUCTOS\n';
-
-    productosOrdenados.forEach((prod) => {
-      textoSimple += '  [ ] ' + prod.nombre + ' - $' + prod.precio.toFixed(2) + '\n';
-      if (prod.nota) {
-        textoSimple += '   Nota: ' + prod.nota + '\n';
-      }
-    });
-
-    if (ped.notaPedido) {
-      textoSimple += '\nNota: ' + ped.notaPedido + '\n';
-    }
-
-    textoSimple += '--------------------------------\n';
-    textoSimple += 'Total: $' + ped.total.toFixed(2) + '\n';
-    textoSimple += '         ' + fecha + '\n';
-    textoSimple += '================================\n';
-
-    const textoEncoded = encodeURIComponent(textoSimple);
-    const bprintUrl = 'bprint://print?text=' + textoEncoded;
-
-    // ================================================================
-    // 🟢 METODO 3: Intent (Android)
-    // ================================================================
-    const intentUrl = 'intent://print?text=' + textoEncoded +
-      '#Intent;scheme=bprint;package=com.mate.bluetoothprint;action=android.intent.action.VIEW;end';
-
-    // ================================================================
-    // 🚀 MOSTRAR OPCIONES AL USUARIO
-    // ================================================================
-    const opcion = confirm(
-      '🖨️ Elige método de impresión:\n\n' +
-      '✅ "Aceptar" → Thermer (iOS/Android)\n' +
-      '❌ "Cancelar" → Copiar texto manualmente'
-    );
-
-    if (opcion) {
-      // Intentar Thermer primero
-      try {
-        window.location.href = thermerUrl;
-        console.log('🔗 Intentando thermer://', thermerUrl);
-        console.log('📤 JSON enviado:', jsonData);
-      } catch (e) {
-        console.error('Error con Thermer:', e);
-      }
-
-      // Si no funciona, intentar bprint después de 1 segundo
-      setTimeout(() => {
-        try {
-          window.location.href = bprintUrl;
-          console.log('🔗 Intentando bprint://');
-        } catch (e) {}
-      }, 1000);
-
-      // Si no funciona, intentar intent después de 2 segundos
-      setTimeout(() => {
-        try {
-          window.location.href = intentUrl;
-          console.log('🔗 Intentando intent://');
-        } catch (e) {}
-      }, 2000);
-
-      // Mensaje de ayuda después de 3 segundos
-      setTimeout(() => {
-        alert(
-          '⚠️ Si la app no se abrió correctamente:\n\n' +
-          'En iOS: Asegúrate de tener "Thermer" instalada.\n' +
-          'En Android: Prueba con "Bluetooth Print" o "Thermal Printer".\n\n' +
-          'Presiona "Aceptar" para ver el texto manual.'
-        );
-        mostrarTextoManual(ped, productosOrdenados, fecha, hora);
-      }, 3000);
-    } else {
-      mostrarTextoManual(ped, productosOrdenados, fecha, hora);
-    }
-  }
-
-  // ================================================================
-  // 📋 FUNCION PARA MOSTRAR TEXTO MANUAL
-  // ================================================================
-  function mostrarTextoManual(ped, productosOrdenados, fecha, hora) {
     let texto = '';
     texto += '================================\n';
     texto += '       MasQueWaffles\n';
@@ -439,6 +322,14 @@
     texto += '         ' + fecha + '\n';
     texto += '================================\n';
 
+    return texto;
+  }
+
+  // ================================================================
+  // 🖨️ METODO 1: PC (USB / Impresión normal)
+  // ================================================================
+  function imprimirPC(ped, productosOrdenados) {
+    const texto = generarTextoComanda(ped, productosOrdenados);
     const ventana = window.open('', '_blank', 'width=400,height=500');
     ventana.document.write(`
       <!DOCTYPE html>
@@ -453,56 +344,169 @@
             padding: 20px; 
             margin: 0;
             white-space: pre-wrap;
-            font-size: 14pt;
+            font-size: 12pt;
             max-width: 80mm;
           }
-          .btn-copiar {
-            background: #2196f3;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 30px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            margin: 10px;
-            width: 90%;
-          }
-          .btn-copiar:active { transform: scale(0.96); }
+          @media print { body { padding: 0; margin: 0; } .no-print { display: none; } }
           .no-print { text-align: center; padding: 10px; border-top: 1px solid #ccc; }
+          .no-print button { padding: 8px 20px; border: none; border-radius: 30px; font-size: 0.9rem; cursor: pointer; margin: 0 4px; }
+          .btn-print { background: #2196f3; color: white; }
+          .btn-close { background: #ccc; color: #333; }
           pre { margin: 0; }
         </style>
       </head>
       <body>
         <pre>${texto}</pre>
         <div class="no-print">
-          <button class="btn-copiar" onclick="copiarTexto()">📋 Copiar texto</button>
-          <div style="font-size:0.8rem;color:#999;margin-top:8px;">
-            1. Copia el texto<br>
-            2. Abre la app de impresión<br>
-            3. Pega y envía a imprimir
-          </div>
+          <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
+          <button class="btn-close" onclick="window.close()">Cerrar</button>
         </div>
-        <script>
-          function copiarTexto() {
-            const texto = \`${texto}\`;
-            navigator.clipboard.writeText(texto).then(() => {
-              alert('✅ Texto copiado al portapapeles');
-            }).catch(() => {
-              const textarea = document.createElement('textarea');
-              textarea.value = \`${texto}\`;
-              document.body.appendChild(textarea);
-              textarea.select();
-              document.execCommand('copy');
-              document.body.removeChild(textarea);
-              alert('✅ Texto copiado al portapapeles');
-            });
-          }
-        <\/script>
+        <script>setTimeout(() => window.print(), 500);<\/script>
       </body>
       </html>
     `);
     ventana.document.close();
   }
+
+  // ================================================================
+  // 🖨️ METODO 2: iOS (Thermer)
+  // ================================================================
+  function imprimirIOS(ped, productosOrdenados) {
+    const ahora = new Date();
+    const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    let printEntries = [];
+    printEntries.push({ type: 0, content: 'MasQueWaffles', bold: 1, align: 1, format: 1 });
+    printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
+    printEntries.push({ type: 0, content: 'Pedido #' + ped.numeroPedido + '  ' + hora, bold: 1, align: 0, format: 0 });
+    printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
+
+    productosOrdenados.forEach((prod) => {
+      printEntries.push({ type: 0, content: '  [ ] ' + prod.nombre + ' - $' + prod.precio.toFixed(2), bold: 0, align: 0, format: 0 });
+      if (prod.nota) {
+        printEntries.push({ type: 0, content: '   Nota: ' + prod.nota, bold: 0, align: 0, format: 0 });
+      }
+    });
+
+    if (ped.notaPedido) {
+      printEntries.push({ type: 0, content: 'Nota: ' + ped.notaPedido, bold: 0, align: 0, format: 0 });
+    }
+
+    printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
+    printEntries.push({ type: 0, content: 'Total: $' + ped.total.toFixed(2), bold: 1, align: 1, format: 1 });
+    printEntries.push({ type: 0, content: fecha, bold: 0, align: 1, format: 0 });
+
+    const jsonData = JSON.stringify(printEntries);
+    const encodedData = encodeURIComponent(jsonData);
+    const thermerUrl = 'thermer://print?data=' + encodedData;
+
+    window.location.href = thermerUrl;
+
+    setTimeout(() => {
+      alert('⚠️ Si la app no se abrió:\n\n1. Asegúrate de tener "Thermer" instalada\n2. Abre la app manualmente\n3. Busca la opción de importar JSON');
+    }, 3000);
+  }
+
+  // ================================================================
+  // 🖨️ METODO 3: Android (Web Bluetooth)
+  // ================================================================
+  let dispositivoBT = null;
+  let caracteristicaBT = null;
+
+  async function imprimirAndroid(ped, productosOrdenados) {
+    const texto = generarTextoComanda(ped, productosOrdenados);
+
+    try {
+      // Si no está conectado, pedir conexión
+      if (!dispositivoBT) {
+        dispositivoBT = await navigator.bluetooth.requestDevice({
+          filters: [
+            { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
+            { namePrefix: 'Printer' },
+            { namePrefix: 'POS' },
+            { namePrefix: 'BT' },
+            { namePrefix: 'GLPrinter' }
+          ],
+          optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+        });
+
+        const server = await dispositivoBT.gatt.connect();
+        const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+        caracteristicaBT = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+
+        alert('✅ Conectado a: ' + (dispositivoBT.name || 'Impresora'));
+      }
+
+      // Enviar texto
+      const encoder = new TextEncoder();
+      const data = encoder.encode(texto + '\n\n\n');
+      await caracteristicaBT.writeValue(data);
+
+      // Enviar corte
+      setTimeout(async () => {
+        try {
+          const corte = new Uint8Array([0x1B, 0x69]);
+          await caracteristicaBT.writeValue(corte);
+        } catch (e) {}
+      }, 500);
+
+      alert('✅ ¡Comanda enviada a la impresora!');
+
+    } catch (error) {
+      console.error('Error:', error);
+      alert('❌ Error al imprimir. Asegúrate de que la impresora esté encendida y visible.\n\n' + error.message);
+      dispositivoBT = null;
+      caracteristicaBT = null;
+    }
+  }
+
+  // ================================================================
+  // 🟢 FUNCION PARA ABRIR EL MODAL Y SELECCIONAR METODO
+  // ================================================================
+  function abrirModalImpresion(ped, productosOrdenados) {
+    pedidoSeleccionado = ped;
+    productosSeleccionados = productosOrdenados;
+    modalImpresion.classList.add('visible');
+  }
+
+  // ================================================================
+  // 🟢 EVENTOS DEL MODAL
+  // ================================================================
+  btnCerrarModal.addEventListener('click', () => {
+    modalImpresion.classList.remove('visible');
+  });
+
+  modalImpresion.addEventListener('click', (e) => {
+    if (e.target === modalImpresion) {
+      modalImpresion.classList.remove('visible');
+    }
+  });
+
+  opcionPC.addEventListener('click', () => {
+    modalImpresion.classList.remove('visible');
+    if (pedidoSeleccionado && productosSeleccionados) {
+      imprimirPC(pedidoSeleccionado, productosSeleccionados);
+    }
+  });
+
+  opcionIOS.addEventListener('click', () => {
+    modalImpresion.classList.remove('visible');
+    if (pedidoSeleccionado && productosSeleccionados) {
+      imprimirIOS(pedidoSeleccionado, productosSeleccionados);
+    }
+  });
+
+  opcionAndroid.addEventListener('click', () => {
+    modalImpresion.classList.remove('visible');
+    if (pedidoSeleccionado && productosSeleccionados) {
+      if (!navigator.bluetooth) {
+        alert('❌ Web Bluetooth no está disponible en este navegador.\n\nUsa Chrome en Android.');
+        return;
+      }
+      imprimirAndroid(pedidoSeleccionado, productosSeleccionados);
+    }
+  });
 
   // ================================================================
   // 🔥 DETECTAR NUEVOS PEDIDOS
@@ -582,7 +586,7 @@
       btnComanda.className = 'btn-imprimir-comanda';
       btnComanda.textContent = '🖨️ Imprimir comanda';
       btnComanda.addEventListener('click', () => {
-        imprimirComanda(ped, productosOrdenados);
+        abrirModalImpresion(ped, productosOrdenados);
       });
       card.appendChild(btnComanda);
 
@@ -674,10 +678,10 @@
       return;
     }
 
-    pedidosEnPreparacion.forEach(ped => {
-      const productosOrdenados = ordenarProductos([...ped.productos]);
-      imprimirComanda(ped, productosOrdenados);
-    });
+    // Imprimir el primero de la lista
+    const ped = pedidosEnPreparacion[0];
+    const productosOrdenados = ordenarProductos([...ped.productos]);
+    abrirModalImpresion(ped, productosOrdenados);
   });
 
   // ================================================================
