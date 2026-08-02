@@ -326,7 +326,7 @@
   }
 
   // ================================================================
-  // 🖨️ FUNCIÓN PARA IMPRIMIR COMANDAS (TEXTO PLANO)
+  // 🖨️ FUNCIÓN PARA IMPRIMIR COMANDAS (CON MÁRGENES CORREGIDOS)
   // ================================================================
   function imprimirComanda(ped, productosOrdenados) {
     const ahora = new Date();
@@ -335,39 +335,55 @@
 
     let texto = '';
     const numeroCopias = 2;
+    const anchoMaximo = 32; // Caracteres por línea para 80mm
+
+    // Función para ajustar texto al ancho máximo
+    function ajustarTexto(linea) {
+      if (linea.length > anchoMaximo) {
+        return linea.substring(0, anchoMaximo - 3) + '...';
+      }
+      return linea;
+    }
+
+    // Función para centrar texto
+    function centrarTexto(texto) {
+      const espacios = Math.max(0, Math.floor((anchoMaximo - texto.length) / 2));
+      return ' '.repeat(espacios) + texto;
+    }
 
     for (let copia = 1; copia <= numeroCopias; copia++) {
       texto += `\n`;
-      texto += `================================\n`;
-      texto += `         🧇 MasQueWaffles\n`;
-      texto += `       Comanda #${copia} de ${numeroCopias}\n`;
-      texto += `================================\n`;
-      texto += `Pedido #${ped.numeroPedido}        ${hora}\n`;
-      texto += `────────────────────────────────\n`;
+      texto += `${'='.repeat(anchoMaximo)}\n`;
+      texto += `${centrarTexto('🧇 MasQueWaffles')}\n`;
+      texto += `${centrarTexto(`Comanda #${copia} de ${numeroCopias}`)}\n`;
+      texto += `${'='.repeat(anchoMaximo)}\n`;
+      texto += `Pedido #${ped.numeroPedido}${' '.repeat(Math.max(0, anchoMaximo - 11 - String(ped.numeroPedido).length))}${hora}\n`;
+      texto += `${'-'.repeat(anchoMaximo)}\n`;
       texto += `📋 PRODUCTOS\n`;
 
       productosOrdenados.forEach((prod) => {
-        texto += `  ☐ ${prod.nombre}\n`;
+        const nombreAjustado = ajustarTexto(prod.nombre);
+        texto += `  ☐ ${nombreAjustado}\n`;
         if (prod.nota) {
-          texto += `     📝 ${prod.nota}\n`;
+          const notaAjustada = ajustarTexto(`   📝 ${prod.nota}`);
+          texto += `${notaAjustada}\n`;
         }
       });
 
       if (ped.notaPedido) {
-        texto += `\n📝 ${ped.notaPedido}\n`;
+        const notaAjustada = ajustarTexto(`📝 ${ped.notaPedido}`);
+        texto += `\n${notaAjustada}\n`;
       }
 
-      texto += `────────────────────────────────\n`;
+      texto += `${'-'.repeat(anchoMaximo)}\n`;
       texto += `Total: $${ped.total.toFixed(2)}\n`;
-      texto += `         ${fecha}\n`;
-      texto += `================================\n`;
+      texto += `${centrarTexto(fecha)}\n`;
+      texto += `${'='.repeat(anchoMaximo)}\n`;
       texto += `\n\n`; // Espacio entre copias
     }
 
     // Crear un blob con el texto y abrirlo
-    const blob = new Blob([texto], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const ventana = window.open(url, '_blank', 'width=400,height=600');
+    const ventana = window.open('', '_blank', 'width=400,height=600');
     ventana.document.write(`
       <!DOCTYPE html>
       <html>
@@ -378,20 +394,50 @@
             font-family: 'Courier New', monospace; 
             background: white; 
             color: black; 
-            padding: 10px; 
+            padding: 0; 
             margin: 0;
             white-space: pre-wrap;
-            font-size: 12pt;
+            font-size: 10pt;
+            max-width: 80mm;
+            margin: 0 auto;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
           }
-          @page { size: 80mm 297mm; margin: 0mm; }
+          @page { 
+            size: 80mm 297mm; 
+            margin: 0mm; 
+          }
           @media print {
             body { padding: 0; margin: 0; }
             .no-print { display: none !important; }
           }
-          .no-print { text-align: center; padding: 10px; border-top: 1px solid #ccc; }
-          .no-print button { padding: 8px 20px; border: none; border-radius: 30px; font-size: 0.9rem; cursor: pointer; margin: 0 4px; }
+          .no-print { 
+            text-align: center; 
+            padding: 10px; 
+            border-top: 1px solid #ccc; 
+            font-family: Arial, sans-serif;
+            max-width: 80mm;
+          }
+          .no-print button { 
+            padding: 8px 20px; 
+            border: none; 
+            border-radius: 30px; 
+            font-size: 0.9rem; 
+            cursor: pointer; 
+            margin: 0 4px; 
+          }
           .btn-print { background: #2196f3; color: white; }
           .btn-close { background: #ccc; color: #333; }
+          pre {
+            margin: 0;
+            padding: 2mm 3mm;
+            font-family: 'Courier New', monospace;
+            font-size: 10pt;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+          }
         </style>
       </head>
       <body>
@@ -408,7 +454,6 @@
       </html>
     `);
     ventana.document.close();
-    URL.revokeObjectURL(url);
   }
 
   // ================================================================
