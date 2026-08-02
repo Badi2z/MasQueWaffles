@@ -56,6 +56,20 @@
     .sin-pedidos { text-align: center; font-size: 1.8rem; color: #666; padding: 60px 0; }
     .nota-pedido { background: #2a2a2a; padding: 10px 16px; border-radius: 16px; margin-bottom: 12px; font-size: 1.2rem; border-left: 4px solid #ffa726; }
     .nota-pedido strong { color: #ffa726; }
+    .btn-imprimir-comanda {
+      background: #2196f3;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 30px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      cursor: pointer;
+      margin-top: 8px;
+      display: inline-block;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .btn-imprimir-comanda:active { transform: scale(0.96); }
     @media (max-width: 600px) {
       .pedido-card .cabecera { font-size: 1.2rem; }
       .pedido-card .producto .nombre { font-size: 1.2rem; }
@@ -102,18 +116,16 @@
 
   let turnoActual = 1;
   let pedidosCache = [];
-  let pedidosAnteriores = []; // Para saber cuándo hay pedido nuevo
+  let pedidosAnteriores = [];
 
   // ================================================================
   // 🔊 FUNCIÓN PARA REPRODUCIR SONIDO
   // ================================================================
   function reproducirSonido() {
     try {
-      // Intentar reproducir usando la API de Audio
       const audio = new Audio('https://badi2z.github.io/MasQueWaffles/notificacion.mp3');
-      audio.volume = 0.8; // Volumen al 80%
+      audio.volume = 0.8;
       audio.play().catch(() => {
-        // Si falla, intentamos con un sonido de respaldo (beep del sistema)
         try {
           const ctx = new (window.AudioContext || window.webkitAudioContext)();
           const oscillator = ctx.createOscillator();
@@ -130,12 +142,60 @@
         }
       });
     } catch (e) {
-      // Si todo falla, mostrar notificación visual
       document.body.style.backgroundColor = '#1a1a1a';
       setTimeout(() => { document.body.style.backgroundColor = ''; }, 300);
     }
   }
 
+  // ================================================================
+  // 🧹 FUNCIÓN PARA ORDENAR PRODUCTOS POR TIPO
+  // ================================================================
+  function ordenarProductos(productos) {
+    const ordenGrupos = {
+      'CREPAS': 1,
+      'ALITAS': 2,
+      'BONELESS': 3,
+      'HAMBURGUESAS': 4,
+      'HOT DOGS': 5,
+      'PAPAS Y SALCHICHA': 6,
+      'NUGGETS, PALITOS, AROS': 7,
+      'SOPAS': 8,
+      'FRAPPÉS': 9,
+      'MALTEADAS': 10,
+      'JELLY COFFEE': 11,
+      'SODA ITALIANA': 12
+    };
+
+    function getGrupo(nombre) {
+      const nombreUpper = nombre.toUpperCase();
+      if (nombreUpper.includes('CREPA')) return 'CREPAS';
+      if (nombreUpper.includes('ALITA')) return 'ALITAS';
+      if (nombreUpper.includes('BONELESS')) return 'BONELESS';
+      if (nombreUpper.includes('HAMBURGUESA')) return 'HAMBURGUESAS';
+      if (nombreUpper.includes('HOT DOG')) return 'HOT DOGS';
+      if (nombreUpper.includes('PAPAS') || nombreUpper.includes('SALCHIPAPAS') || nombreUpper.includes('SALCHIPULPOS')) return 'PAPAS Y SALCHICHA';
+      if (nombreUpper.includes('NUGGETS') || nombreUpper.includes('PALITOS') || nombreUpper.includes('AROS') || nombreUpper.includes('SINCRONIZADA')) return 'NUGGETS, PALITOS, AROS';
+      if (nombreUpper.includes('SOPA') || nombreUpper.includes('BULDAK') || nombreUpper.includes('RAMEN')) return 'SOPAS';
+      if (nombreUpper.includes('FRAPPÉ') || nombreUpper.includes('FRAPPE')) return 'FRAPPÉS';
+      if (nombreUpper.includes('MALTEADA')) return 'MALTEADAS';
+      if (nombreUpper.includes('JELLY')) return 'JELLY COFFEE';
+      if (nombreUpper.includes('SODA')) return 'SODA ITALIANA';
+      return 'OTROS';
+    }
+
+    return productos.sort((a, b) => {
+      const grupoA = getGrupo(a.nombre);
+      const grupoB = getGrupo(b.nombre);
+      const ordenA = ordenGrupos[grupoA] || 999;
+      const ordenB = ordenGrupos[grupoB] || 999;
+      if (ordenA !== ordenB) return ordenA - ordenB;
+      return a.nombre.localeCompare(b.nombre);
+    });
+  }
+
+  // ================================================================
+  // FUNCIONES PRINCIPALES
+  // ================================================================
   async function getTurno() {
     const docRef = doc(db, 'config', 'turnoActual');
     const docSnap = await getDoc(docRef);
@@ -156,13 +216,11 @@
         }
       });
 
-      // Verificar si hay pedidos nuevos (comparar IDs)
       const idsActuales = pedidos.map(p => p.id);
       const idsAnteriores = pedidosAnteriores.map(p => p.id);
       const hayNuevo = idsActuales.some(id => !idsAnteriores.includes(id));
 
       if (hayNuevo && pedidos.length > 0) {
-        // ¡Hay un pedido nuevo! Reproducir sonido
         reproducirSonido();
         console.log('🔊 ¡Nuevo pedido! Reproduciendo sonido...');
       }
@@ -182,6 +240,8 @@
     }
     pedidosContainer.innerHTML = '';
     pedidosCache.forEach(ped => {
+      const productosOrdenados = ordenarProductos([...ped.productos]);
+
       const card = document.createElement('div');
       card.className = 'pedido-card';
       if (ped.estadoPedido === 'listo') card.classList.add('listo');
@@ -200,6 +260,15 @@
       totalPedidoDiv.textContent = `Total del pedido: $${ped.total.toFixed(2)}`;
       card.appendChild(totalPedidoDiv);
 
+      // Botón para imprimir comanda de este pedido
+      const btnComanda = document.createElement('button');
+      btnComanda.className = 'btn-imprimir-comanda';
+      btnComanda.textContent = '🖨️ Imprimir comanda (2 copias)';
+      btnComanda.addEventListener('click', () => {
+        imprimirComanda(ped, productosOrdenados);
+      });
+      card.appendChild(btnComanda);
+
       if (ped.notaPedido) {
         const notaDiv = document.createElement('div');
         notaDiv.className = 'nota-pedido';
@@ -207,7 +276,7 @@
         card.appendChild(notaDiv);
       }
 
-      ped.productos.forEach((prod, idx) => {
+      productosOrdenados.forEach((prod, idx) => {
         const prodDiv = document.createElement('div');
         prodDiv.className = 'producto';
         if (prod.estadoProducto === 'listo') prodDiv.classList.add('listo');
@@ -261,7 +330,7 @@
         });
       });
 
-      const todosListos = ped.productos.every(p => p.estadoProducto === 'listo');
+      const todosListos = productosOrdenados.every(p => p.estadoProducto === 'listo');
       if (todosListos && ped.estadoPedido !== 'listo') {
         const btnPedidoListo = document.createElement('button');
         btnPedidoListo.className = 'btn-pedido-listo';
@@ -278,32 +347,127 @@
     });
   }
 
-  btnImprimirComanda.addEventListener('click', () => {
-    const pedidosEnPreparacion = pedidosCache.filter(p => p.estadoPedido === 'en_preparacion');
-    if (pedidosEnPreparacion.length === 0) {
-      alert('No hay pedidos en preparación.');
-      return;
-    }
-    let contenido = `<h1>🧇 MasQueWaffles - Comanda</h1><hr>`;
-    pedidosEnPreparacion.forEach(ped => {
-      contenido += `<h2>Pedido #${ped.numeroPedido} - ${new Date(ped.fechaHora).toLocaleTimeString()}</h2>`;
-      ped.productos.forEach(prod => {
-        contenido += `<p><strong>${prod.nombre}</strong> - $${prod.precio}</p>`;
-        if (prod.ingredientes) contenido += `<p style="font-size:0.9rem;">${prod.ingredientes}</p>`;
-        if (prod.nota) contenido += `<p style="color:blue;">Nota: ${prod.nota}</p>`;
+  // ================================================================
+  // 🖨️ FUNCIÓN PARA IMPRIMIR COMANDAS (2 COPIAS)
+  // ================================================================
+  function imprimirComanda(ped, productosOrdenados) {
+    const ahora = new Date();
+    const fecha = ahora.toLocaleDateString('es-MX');
+    const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    let contenido = '';
+    const numeroCopias = 2;
+
+    for (let copia = 1; copia <= numeroCopias; copia++) {
+      contenido += `
+        <div style="page-break-after: always; padding: 20px; max-width: 300px; margin: 0 auto; font-family: 'Courier New', monospace;">
+          <div style="text-align: center; border-bottom: 2px dashed #333; padding-bottom: 8px;">
+            <h1 style="font-size: 1.6rem; margin: 0; color: #da291c;">🧇 MasQueWaffles</h1>
+            <div style="font-size: 0.9rem; color: #555;">Comanda #${copia} de ${numeroCopias}</div>
+          </div>
+          <div style="padding: 8px 0; border-bottom: 1px dashed #ccc;">
+            <div style="display: flex; justify-content: space-between; font-size: 1rem;">
+              <span><strong>Pedido #${ped.numeroPedido}</strong></span>
+              <span>${fecha}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 1rem;">
+              <span>Hora:</span>
+              <span>${hora}</span>
+            </div>
+          </div>
+          <div style="padding: 8px 0;">
+            <div style="font-weight: bold; font-size: 1.1rem; border-bottom: 1px solid #ccc; margin-bottom: 4px;">📋 PRODUCTOS</div>
+      `;
+
+      productosOrdenados.forEach((prod, idx) => {
+        contenido += `
+          <div style="padding: 6px 0; border-bottom: 1px dotted #eee;">
+            <div style="display: flex; justify-content: space-between; font-weight: bold;">
+              <span>${idx + 1}. ${prod.nombre}</span>
+              <span>$${prod.precio}</span>
+            </div>
+            <div style="font-size: 0.85rem; color: #555; padding-left: 12px; line-height: 1.4;">
+              ${prod.ingredientes || 'Sin ingredientes'}
+            </div>
+            ${prod.nota ? `<div style="font-size: 0.85rem; color: #da291c; padding-left: 12px;">📝 ${prod.nota}</div>` : ''}
+          </div>
+        `;
       });
-      contenido += `<hr>`;
-    });
-    const ventana = window.open('', '_blank');
+
+      if (ped.notaPedido) {
+        contenido += `
+          <div style="padding: 6px 0; font-size: 0.9rem; color: #da291c; border-top: 1px dashed #ccc;">
+            <strong>📝 Nota del pedido:</strong> ${ped.notaPedido}
+          </div>
+        `;
+      }
+
+      contenido += `
+          </div>
+          <div style="border-top: 2px dashed #333; padding-top: 8px; text-align: center;">
+            <div style="font-size: 1.2rem; font-weight: bold;">Total: $${ped.total.toFixed(2)}</div>
+            <div style="font-size: 0.8rem; color: #888; margin-top: 4px;">Cocina #${copia}</div>
+            <div style="font-size: 0.7rem; color: #aaa; margin-top: 4px;">${fecha} ${hora}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    const ventana = window.open('', '_blank', 'width=400,height=600');
     ventana.document.write(`
-      <html><head><title>Comanda</title>
-      <style>body{font-family:sans-serif;padding:20px;} h1{text-align:center;} h2{background:#eee;padding:8px;} p{margin:4px 0;}</style>
-      </head><body>${contenido}</body></html>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Comanda #${ped.numeroPedido}</title>
+        <style>
+          @page { size: 80mm; margin: 5mm; }
+          body { font-family: 'Courier New', monospace; margin: 0; padding: 0; }
+          * { box-sizing: border-box; }
+          .print-content { width: 100%; }
+          @media print { .no-print { display: none; } }
+        </style>
+      </head>
+      <body>
+        <div class="print-content">${contenido}</div>
+        <div style="text-align: center; padding: 16px; font-size: 0.9rem; color: #666; border-top: 1px solid #ccc;" class="no-print">
+          <button onclick="window.print()" style="padding: 10px 30px; background: #2196f3; color: white; border: none; border-radius: 30px; font-size: 1.1rem; cursor: pointer; margin: 0 6px;">
+            🖨️ Imprimir (2 copias)
+          </button>
+          <button onclick="window.close()" style="padding: 10px 30px; background: #ccc; color: #333; border: none; border-radius: 30px; font-size: 1.1rem; cursor: pointer; margin: 0 6px;">
+            Cerrar
+          </button>
+          <div style="margin-top: 8px; font-size: 0.8rem; color: #999;">
+            ⚠️ Se imprimirán 2 copias automáticamente.
+          </div>
+        </div>
+        <script>
+          setTimeout(() => { window.print(); }, 500);
+        <\/script>
+      </body>
+      </html>
     `);
     ventana.document.close();
-    ventana.print();
+  }
+
+  // ================================================================
+  // IMPRIMIR TODAS LAS COMANDAS (botón general)
+  // ================================================================
+  btnImprimirComanda.addEventListener('click', () => {
+    const pedidosEnPreparacion = pedidosCache.filter(p => p.estadoPedido === 'en_preparacion' || p.estadoPedido === 'listo');
+    if (pedidosEnPreparacion.length === 0) {
+      alert('No hay pedidos activos para imprimir.');
+      return;
+    }
+
+    pedidosEnPreparacion.forEach(ped => {
+      const productosOrdenados = ordenarProductos([...ped.productos]);
+      imprimirComanda(ped, productosOrdenados);
+    });
   });
 
+  // ================================================================
+  // INICIALIZACIÓN
+  // ================================================================
   signInAnonymously(auth)
     .then(() => {
       console.log('✅ Conectado a Firebase (Cocina)');
@@ -311,7 +475,7 @@
     })
     .catch((error) => {
       console.error('Error de autenticación:', error);
-      alert('No se pudo conectar con la base de datos. Revisa tu conexión y las llaves de Firebase.');
+      alert('No se pudo conectar con la base de datos.');
     });
 
   async function iniciarApp() {

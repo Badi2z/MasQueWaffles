@@ -253,7 +253,6 @@
         { nombre: 'Palitos de queso', precio: 50, ingredientes: 'Plato hamburguesero, 5 palitos de queso, 2 trozos de pepino, 2 trozos de zanahoria y aderezo vasito. O salsas' },
         { nombre: 'Aros de Cebolla', precio: 36, ingredientes: 'Plato Hamburguesero, 5 aros de cebolla, crema, cátsup y salsa' },
         { nombre: 'Sincronizada', precio: 40, ingredientes: '2 tortillas de harina, plato plano cuadrado, queso Oaxaca, 2 jamones, 100 g de papas' },
-        // NUEVO PRODUCTO
         { nombre: 'Sincronizada Sencilla', precio: 25, ingredientes: '2 tortillas de harina, queso Oaxaca, 1 jamón' }
       ]}
     ]},
@@ -306,7 +305,6 @@
     ]},
     { id: 'soda', nombre: 'SODA ITALIANA', emoji: '🥤', permitePapas: false, grupos: [
       { titulo: 'Sodas Italianas', items: [
-        // PRECIO ACTUALIZADO A $50
         { nombre: 'Soda Italiana Mora azul', precio: 50, ingredientes: 'Agua mineral, jarabe de mora azul, hielo' },
         { nombre: 'Soda Italiana Manzana verde', precio: 50, ingredientes: 'Agua mineral, jarabe de manzana verde, hielo' }
       ]}
@@ -365,15 +363,11 @@
     let nuevoContador = (data.contador || 0) + 1;
     let turnoActualTemp = data.turno || 1;
 
-    // Si llega a 50 pedidos, pasar al siguiente turno (1-4, luego reiniciar)
     if (nuevoContador > 50) {
       let nuevoTurno = turnoActualTemp + 1;
       if (nuevoTurno > 4) {
-        // Turno 4 finalizado, reiniciar a turno 1 y borrar todo
         nuevoTurno = 1;
-        // Eliminar todos los pedidos del turno 4
         await eliminarPedidosTurno(4);
-        // Limpiar caché local
         pedidosCache = [];
         renderPedidosEnCurso();
         actualizarResumenTurno();
@@ -443,7 +437,7 @@
   }
 
   // ================================================================
-  // MODAL DE PRODUCTOS (CON X PARA CERRAR)
+  // MODAL DE PRODUCTOS (CON X PARA CERRAR Y TECLA ESC)
   // ================================================================
   function abrirModalCategoria(cat) {
     modalContenido.innerHTML = '';
@@ -497,7 +491,17 @@
     cerrar.textContent = 'Cerrar';
     cerrar.addEventListener('click', () => { modalSubproductos.style.display = 'none'; });
     modalContenido.appendChild(cerrar);
+    
     modalSubproductos.style.display = 'flex';
+
+    // ✅ TECLA ESC PARA CERRAR
+    const cerrarConEsc = function(e) {
+      if (e.key === 'Escape') {
+        modalSubproductos.style.display = 'none';
+        document.removeEventListener('keydown', cerrarConEsc);
+      }
+    };
+    document.addEventListener('keydown', cerrarConEsc);
   }
 
   // ================================================================
@@ -829,7 +833,6 @@
       });
       acciones.appendChild(btnEntregado);
 
-      // 🔴 NUEVO BOTÓN: CANCELAR PEDIDO
       const btnCancelarPedido = document.createElement('button');
       btnCancelarPedido.className = 'btn-cancelar-pedido';
       btnCancelarPedido.textContent = '✕ Cancelar pedido';
@@ -837,7 +840,6 @@
         if (confirm(`¿Cancelar el pedido #${ped.numeroPedido}? Esta acción eliminará el pedido y no se contará en las ventas.`)) {
           try {
             await deleteDoc(doc(db, 'pedidos', ped.id));
-            // Eliminar de la caché local
             pedidosCache = pedidosCache.filter(p => p.id !== ped.id);
             renderPedidosEnCurso();
             actualizarResumenTurno();
