@@ -139,7 +139,7 @@
       'PAPAS Y SALCHICHA': 6,
       'NUGGETS, PALITOS, AROS': 7,
       'SOPAS': 8,
-      'FRAPPÉS': 9,
+      'FRAPPES': 9,
       'MALTEADAS': 10,
       'JELLY COFFEE': 11,
       'SODA ITALIANA': 12
@@ -155,7 +155,7 @@
       if (nombreUpper.includes('PAPAS') || nombreUpper.includes('SALCHIPAPAS') || nombreUpper.includes('SALCHIPULPOS')) return 'PAPAS Y SALCHICHA';
       if (nombreUpper.includes('NUGGETS') || nombreUpper.includes('PALITOS') || nombreUpper.includes('AROS') || nombreUpper.includes('SINCRONIZADA')) return 'NUGGETS, PALITOS, AROS';
       if (nombreUpper.includes('SOPA') || nombreUpper.includes('BULDAK') || nombreUpper.includes('RAMEN')) return 'SOPAS';
-      if (nombreUpper.includes('FRAPPÉ') || nombreUpper.includes('FRAPPE')) return 'FRAPPÉS';
+      if (nombreUpper.includes('FRAPPE')) return 'FRAPPES';
       if (nombreUpper.includes('MALTEADA')) return 'MALTEADAS';
       if (nombreUpper.includes('JELLY')) return 'JELLY COFFEE';
       if (nombreUpper.includes('SODA')) return 'SODA ITALIANA';
@@ -201,7 +201,7 @@
 
       if (hayNuevo && pedidos.length > 0) {
         reproducirSonido();
-        console.log('🔊 ¡Nuevo pedido! Reproduciendo sonido...');
+        console.log('🔊 Nuevo pedido! Reproduciendo sonido...');
       }
 
       pedidosAnteriores = pedidos;
@@ -297,7 +297,7 @@
               await updateDoc(doc(db, 'pedidos', ped.id), { productos });
             } catch (e) { alert('Error: ' + e.message); }
           } else {
-            const eliminar = confirm('Este producto aún no está listo. ¿Deseas eliminarlo del pedido?');
+            const eliminar = confirm('Este producto aun no esta listo. Deseas eliminarlo del pedido?');
             if (eliminar) {
               const nuevosProductos = ped.productos.filter((_, i) => i !== idx);
               try {
@@ -326,7 +326,7 @@
   }
 
   // ================================================================
-  // 🖨️ FUNCIÓN PARA IMPRIMIR COMANDAS (CON MÁRGENES CORREGIDOS)
+  // 🖨️ FUNCION PARA IMPRIMIR COMANDAS (TEXTO PLANO PARA POS80)
   // ================================================================
   function imprimirComanda(ped, productosOrdenados) {
     const ahora = new Date();
@@ -335,54 +335,68 @@
 
     let texto = '';
     const numeroCopias = 2;
-    const anchoMaximo = 32; // Caracteres por línea para 80mm
+    const ANCHO = 32; // 32 caracteres por linea para 80mm
 
-    // Función para ajustar texto al ancho máximo
-    function ajustarTexto(linea) {
-      if (linea.length > anchoMaximo) {
-        return linea.substring(0, anchoMaximo - 3) + '...';
-      }
-      return linea;
+    // Funciones de texto plano (sin emojis)
+    function limpiarTexto(str) {
+      // Remover emojis y caracteres especiales
+      return str.replace(/[^\x00-\x7F]/g, '').trim();
     }
 
-    // Función para centrar texto
-    function centrarTexto(texto) {
-      const espacios = Math.max(0, Math.floor((anchoMaximo - texto.length) / 2));
-      return ' '.repeat(espacios) + texto;
+    function centrar(t) {
+      const lim = limpiarTexto(t);
+      const espacios = Math.max(0, Math.floor((ANCHO - lim.length) / 2));
+      return ' '.repeat(espacios) + lim;
+    }
+
+    function ajustar(t) {
+      const lim = limpiarTexto(t);
+      if (lim.length > ANCHO) {
+        return lim.substring(0, ANCHO - 3) + '...';
+      }
+      return lim;
+    }
+
+    function linea(t) {
+      const lim = limpiarTexto(t);
+      if (lim.length > ANCHO) {
+        return lim.substring(0, ANCHO);
+      }
+      return lim.padEnd(ANCHO, ' ');
     }
 
     for (let copia = 1; copia <= numeroCopias; copia++) {
       texto += `\n`;
-      texto += `${'='.repeat(anchoMaximo)}\n`;
-      texto += `${centrarTexto('🧇 MasQueWaffles')}\n`;
-      texto += `${centrarTexto(`Comanda #${copia} de ${numeroCopias}`)}\n`;
-      texto += `${'='.repeat(anchoMaximo)}\n`;
-      texto += `Pedido #${ped.numeroPedido}${' '.repeat(Math.max(0, anchoMaximo - 11 - String(ped.numeroPedido).length))}${hora}\n`;
-      texto += `${'-'.repeat(anchoMaximo)}\n`;
-      texto += `📋 PRODUCTOS\n`;
+      texto += `================================\n`;
+      texto += `${centrar('MasQueWaffles')}\n`;
+      texto += `${centrar('Comanda ' + copia + ' de ' + numeroCopias)}\n`;
+      texto += `================================\n`;
+      texto += `${linea(`Pedido #${ped.numeroPedido} ${hora}`)}\n`;
+      texto += `--------------------------------\n`;
+      texto += ` PRODUCTOS\n`;
 
       productosOrdenados.forEach((prod) => {
-        const nombreAjustado = ajustarTexto(prod.nombre);
-        texto += `  ☐ ${nombreAjustado}\n`;
+        const nombre = ajustar(prod.nombre);
+        texto += `  [ ] ${nombre}\n`;
         if (prod.nota) {
-          const notaAjustada = ajustarTexto(`   📝 ${prod.nota}`);
-          texto += `${notaAjustada}\n`;
+          const nota = ajustar(`   Nota: ${prod.nota}`);
+          texto += `${nota}\n`;
         }
       });
 
       if (ped.notaPedido) {
-        const notaAjustada = ajustarTexto(`📝 ${ped.notaPedido}`);
-        texto += `\n${notaAjustada}\n`;
+        const nota = ajustar(`Nota: ${ped.notaPedido}`);
+        texto += `\n${nota}\n`;
       }
 
-      texto += `${'-'.repeat(anchoMaximo)}\n`;
-      texto += `Total: $${ped.total.toFixed(2)}\n`;
-      texto += `${centrarTexto(fecha)}\n`;
-      texto += `${'='.repeat(anchoMaximo)}\n`;
-      texto += `\n\n`; // Espacio entre copias
+      texto += `--------------------------------\n`;
+      texto += `${linea(`Total: $${ped.total.toFixed(2)}`)}\n`;
+      texto += `${centrar(fecha)}\n`;
+      texto += `================================\n`;
+      texto += `\n\n`;
     }
 
-    // Crear un blob con el texto y abrirlo
+    // Abrir ventana con texto plano
     const ventana = window.open('', '_blank', 'width=400,height=600');
     ventana.document.write(`
       <!DOCTYPE html>
@@ -397,11 +411,9 @@
             padding: 0; 
             margin: 0;
             white-space: pre-wrap;
-            font-size: 10pt;
+            font-size: 11pt;
             max-width: 80mm;
             margin: 0 auto;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
           }
           @page { 
             size: 80mm 297mm; 
@@ -432,11 +444,10 @@
             margin: 0;
             padding: 2mm 3mm;
             font-family: 'Courier New', monospace;
-            font-size: 10pt;
+            font-size: 11pt;
             line-height: 1.4;
             white-space: pre-wrap;
             word-wrap: break-word;
-            overflow-wrap: break-word;
           }
         </style>
       </head>
@@ -445,7 +456,7 @@
         <div class="no-print">
           <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
           <button class="btn-close" onclick="window.close()">Cerrar</button>
-          <div style="margin-top:4px;font-size:0.7rem;color:#999;">Se imprimirán 2 copias automáticamente</div>
+          <div style="margin-top:4px;font-size:0.7rem;color:#999;">Se imprimiran 2 copias</div>
         </div>
         <script>
           setTimeout(() => { window.print(); }, 500);
