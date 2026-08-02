@@ -272,7 +272,7 @@
 
       const btnComanda = document.createElement('button');
       btnComanda.className = 'btn-imprimir-comanda';
-      btnComanda.textContent = 'Imprimir comanda (2 copias)';
+      btnComanda.textContent = 'Imprimir comanda';
       btnComanda.addEventListener('click', () => {
         imprimirComanda(ped, productosOrdenados);
       });
@@ -357,16 +357,15 @@
   }
 
   // ================================================================
-  // 🖨️ FUNCION PARA IMPRIMIR COMANDAS (TEXTO COMPLETO, SIN RECORTAR)
+  // 🖨️ FUNCION PARA IMPRIMIR COMANDAS (SOLO 1 COPIA)
   // ================================================================
   function imprimirComanda(ped, productosOrdenados) {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX');
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    const ANCHO = 30;
+    const ANCHO = 32;
     let texto = '';
-    const numeroCopias = 2;
 
     function centrar(t) {
       const limpio = limpiarTexto(t);
@@ -374,60 +373,55 @@
       return ' '.repeat(espacios) + limpio;
     }
 
-    function lineaConContenido(contenido) {
-      const limpio = limpiarTexto(contenido);
-      if (limpio.length > ANCHO) {
-        return limpio.substring(0, ANCHO);
-      }
+    function linea(t) {
+      const limpio = limpiarTexto(t);
+      if (limpio.length > ANCHO) return limpio.substring(0, ANCHO);
       return limpio.padEnd(ANCHO, ' ');
     }
 
-    for (let copia = 1; copia <= numeroCopias; copia++) {
-      texto += '\r\n';
-      texto += '================================\r\n';
-      texto += centrar('MasQueWaffles') + '\r\n';
-      texto += centrar('Comanda ' + copia + ' de ' + numeroCopias) + '\r\n';
-      texto += '================================\r\n';
-      texto += lineaConContenido('Pedido #' + ped.numeroPedido + ' ' + hora) + '\r\n';
-      texto += '--------------------------------\r\n';
-      texto += ' PRODUCTOS\r\n';
+    // Generar UNA SOLA comanda
+    texto += '================================\r\n';
+    texto += centrar('MasQueWaffles') + '\r\n';
+    texto += centrar('Comanda') + '\r\n';
+    texto += '================================\r\n';
+    texto += linea('Pedido #' + ped.numeroPedido + ' ' + hora) + '\r\n';
+    texto += '--------------------------------\r\n';
+    texto += ' PRODUCTOS\r\n';
 
-      productosOrdenados.forEach((prod) => {
-        const nombreLimpio = limpiarTexto(prod.nombre);
-        // Dividir el nombre en lineas si es muy largo
-        const lineasNombre = dividirTexto(nombreLimpio, ANCHO - 6);
-        lineasNombre.forEach((linea, idx) => {
-          if (idx === 0) {
-            texto += '  [ ] ' + linea + '\r\n';
-          } else {
-            texto += '       ' + linea + '\r\n';
-          }
-        });
-        
-        if (prod.nota) {
-          const notaLimpia = limpiarTexto('Nota: ' + prod.nota);
-          const lineasNota = dividirTexto(notaLimpia, ANCHO - 4);
-          lineasNota.forEach(linea => {
-            texto += '     ' + linea + '\r\n';
-          });
+    productosOrdenados.forEach((prod) => {
+      const nombreLimpio = limpiarTexto(prod.nombre);
+      const lineasNombre = dividirTexto(nombreLimpio, ANCHO - 6);
+      lineasNombre.forEach((linea, idx) => {
+        if (idx === 0) {
+          texto += '  [ ] ' + linea + '\r\n';
+        } else {
+          texto += '       ' + linea + '\r\n';
         }
       });
-
-      if (ped.notaPedido) {
-        const notaPedidoLimpia = limpiarTexto('Nota: ' + ped.notaPedido);
-        const lineasNotaPedido = dividirTexto(notaPedidoLimpia, ANCHO - 2);
-        texto += '\r\n';
-        lineasNotaPedido.forEach(linea => {
-          texto += '  ' + linea + '\r\n';
+      
+      if (prod.nota) {
+        const notaLimpia = limpiarTexto('Nota: ' + prod.nota);
+        const lineasNota = dividirTexto(notaLimpia, ANCHO - 4);
+        lineasNota.forEach(linea => {
+          texto += '     ' + linea + '\r\n';
         });
       }
+    });
 
-      texto += '--------------------------------\r\n';
-      texto += lineaConContenido('Total: $' + ped.total.toFixed(2)) + '\r\n';
-      texto += centrar(fecha) + '\r\n';
-      texto += '================================\r\n';
+    if (ped.notaPedido) {
+      const notaPedidoLimpia = limpiarTexto('Nota: ' + ped.notaPedido);
+      const lineasNotaPedido = dividirTexto(notaPedidoLimpia, ANCHO - 2);
       texto += '\r\n';
+      lineasNotaPedido.forEach(linea => {
+        texto += '  ' + linea + '\r\n';
+      });
     }
+
+    texto += '--------------------------------\r\n';
+    texto += linea('Total: $' + ped.total.toFixed(2)) + '\r\n';
+    texto += centrar(fecha) + '\r\n';
+    texto += '================================\r\n';
+    texto += '\r\n';
 
     // Crear ventana de impresion
     const ventana = window.open('', '_blank', 'width=400,height=600');
@@ -487,7 +481,6 @@
         <div class="no-print">
           <button class="btn-print" onclick="window.print()">Imprimir</button>
           <button class="btn-close" onclick="window.close()">Cerrar</button>
-          <div style="margin-top:4px;font-size:0.7rem;color:#999;">Se imprimiran 2 copias</div>
         </div>
         <script>
           setTimeout(function() { window.print(); }, 800);
