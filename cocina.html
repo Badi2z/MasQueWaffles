@@ -348,7 +348,7 @@
   }
 
   // ================================================================
-  // 🖨️ FUNCIÓN PARA IMPRIMIR COMANDAS CON CUADROS PARA PALOMEAR
+  // 🖨️ FUNCIÓN PARA IMPRIMIR COMANDAS (CORREGIDA PARA 80mm)
   // ================================================================
   function imprimirComanda(ped, productosOrdenados) {
     const ahora = new Date();
@@ -360,34 +360,30 @@
 
     for (let copia = 1; copia <= numeroCopias; copia++) {
       contenido += `
-        <div style="page-break-after: always; padding: 10px 14px; max-width: 300px; margin: 0 auto; font-family: 'Courier New', monospace; font-size: 0.8rem;">
-          <div style="text-align: center; border-bottom: 2px dashed #333; padding-bottom: 6px;">
-            <h1 style="font-size: 1.3rem; margin: 0; color: #da291c; letter-spacing: 1px;">🧇 MasQueWaffles</h1>
-            <div style="font-size: 0.65rem; color: #555;">Comanda #${copia} de ${numeroCopias}</div>
+        <div style="width: 100%; max-width: 80mm; margin: 0 auto; padding: 2mm 3mm; font-family: 'Courier New', monospace; font-size: 10pt; box-sizing: border-box;">
+          <div style="text-align: center; border-bottom: 1px dashed #333; padding-bottom: 4px;">
+            <div style="font-size: 14pt; font-weight: bold; color: #da291c;">🧇 MasQueWaffles</div>
+            <div style="font-size: 7pt; color: #555;">Comanda #${copia} de ${numeroCopias}</div>
           </div>
-          <div style="padding: 4px 0; border-bottom: 1px dashed #ccc;">
-            <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 0.85rem;">
-              <span>Pedido #${ped.numeroPedido}</span>
-              <span>${hora}</span>
-            </div>
+          <div style="padding: 3px 0; border-bottom: 1px dashed #ccc; display: flex; justify-content: space-between; font-weight: bold; font-size: 9pt;">
+            <span>Pedido #${ped.numeroPedido}</span>
+            <span>${hora}</span>
           </div>
-          <div style="padding: 4px 0;">
-            <div style="font-weight: bold; font-size: 0.8rem; border-bottom: 1px solid #ccc; margin-bottom: 2px;">📋 PRODUCTOS</div>
+          <div style="padding: 3px 0;">
+            <div style="font-weight: bold; font-size: 9pt; border-bottom: 1px solid #ccc; margin-bottom: 2px;">PRODUCTOS</div>
       `;
 
-      // Cada producto con su cuadrito [ ] para palomear
       productosOrdenados.forEach((prod) => {
         contenido += `
-          <div style="padding: 2px 0; display: flex; justify-content: flex-start; align-items: center; font-size: 0.8rem; gap: 4px;">
-            <span style="display: inline-block; width: 14px; height: 14px; border: 1.5px solid #333; flex-shrink: 0; margin-right: 4px;"></span>
+          <div style="padding: 1px 0; display: flex; align-items: center; font-size: 9pt; gap: 3px;">
+            <span style="display: inline-block; width: 10px; height: 10px; border: 1px solid #333; flex-shrink: 0;"></span>
             <span style="flex: 1;">${prod.nombre}</span>
             <span style="font-weight: bold; flex-shrink: 0;">$${prod.precio}</span>
           </div>
         `;
-        // Nota del producto si existe
         if (prod.nota) {
           contenido += `
-            <div style="padding: 0 0 2px 22px; font-size: 0.7rem; color: #da291c; font-style: italic;">
+            <div style="padding: 0 0 1px 16px; font-size: 7pt; color: #da291c; font-style: italic;">
               📝 ${prod.nota}
             </div>
           `;
@@ -396,7 +392,7 @@
 
       if (ped.notaPedido) {
         contenido += `
-          <div style="padding: 4px 0; font-size: 0.75rem; color: #da291c; border-top: 1px dashed #ccc; margin-top: 2px;">
+          <div style="padding: 3px 0; font-size: 8pt; color: #da291c; border-top: 1px dashed #ccc; margin-top: 2px;">
             📝 ${ped.notaPedido}
           </div>
         `;
@@ -404,9 +400,9 @@
 
       contenido += `
           </div>
-          <div style="border-top: 2px dashed #333; padding-top: 4px; text-align: center;">
-            <div style="font-size: 0.95rem; font-weight: bold;">Total: $${ped.total.toFixed(2)}</div>
-            <div style="font-size: 0.6rem; color: #888; margin-top: 2px;">${fecha}</div>
+          <div style="border-top: 2px dashed #333; padding-top: 3px; text-align: center;">
+            <div style="font-size: 11pt; font-weight: bold;">Total: $${ped.total.toFixed(2)}</div>
+            <div style="font-size: 6pt; color: #888; margin-top: 1px;">${fecha}</div>
           </div>
         </div>
       `;
@@ -419,24 +415,36 @@
       <head>
         <title>Comanda #${ped.numeroPedido}</title>
         <style>
-          @page { size: 80mm; margin: 3mm; }
-          body { font-family: 'Courier New', monospace; margin: 0; padding: 0; background: white; }
-          * { box-sizing: border-box; }
-          .print-content { width: 100%; }
-          @media print { .no-print { display: none; } }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            background: white; 
+            margin: 0; 
+            padding: 0; 
+            display: flex;
+            justify-content: center;
+          }
+          @page { 
+            size: 80mm 297mm; 
+            margin: 0mm; 
+          }
+          @media print {
+            body { margin: 0; padding: 0; }
+            .no-print { display: none !important; }
+          }
+          .print-content { width: 80mm; }
         </style>
       </head>
       <body>
         <div class="print-content">${contenido}</div>
-        <div style="text-align: center; padding: 12px; font-size: 0.8rem; color: #666; border-top: 1px solid #ccc;" class="no-print">
-          <button onclick="window.print()" style="padding: 10px 24px; background: #2196f3; color: white; border: none; border-radius: 30px; font-size: 1rem; cursor: pointer; margin: 0 4px;">
-            🖨️ Imprimir (2 copias)
+        <div style="text-align: center; padding: 10px; font-size: 0.8rem; color: #666; border-top: 1px solid #ccc; width: 80mm;" class="no-print">
+          <button onclick="window.print()" style="padding: 8px 20px; background: #2196f3; color: white; border: none; border-radius: 30px; font-size: 0.9rem; cursor: pointer; margin: 0 4px;">
+            🖨️ Imprimir
           </button>
-          <button onclick="window.close()" style="padding: 10px 24px; background: #ccc; color: #333; border: none; border-radius: 30px; font-size: 1rem; cursor: pointer; margin: 0 4px;">
+          <button onclick="window.close()" style="padding: 8px 20px; background: #ccc; color: #333; border: none; border-radius: 30px; font-size: 0.9rem; cursor: pointer; margin: 0 4px;">
             Cerrar
           </button>
           <div style="margin-top: 4px; font-size: 0.7rem; color: #999;">
-            ⚠️ Se imprimirán 2 copias automáticamente.
+            Se imprimirán 2 copias automáticamente
           </div>
         </div>
         <script>
