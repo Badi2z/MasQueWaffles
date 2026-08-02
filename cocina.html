@@ -49,20 +49,6 @@
     .nota-pedido strong { color: #ffa726; }
     .btn-imprimir-comanda { background: #2196f3; color: white; border: none; padding: 10px 16px; border-radius: 30px; font-weight: bold; font-size: 0.9rem; cursor: pointer; margin-top: 8px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
     .btn-imprimir-comanda:active { transform: scale(0.96); }
-    .btn-bluetooth {
-      background: #0084FF;
-      color: white;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 30px;
-      font-weight: bold;
-      font-size: 0.9rem;
-      cursor: pointer;
-      margin-top: 8px;
-      display: inline-block;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-    .btn-bluetooth:active { transform: scale(0.96); }
     @media (max-width: 600px) {
       .pedido-card .cabecera { font-size: 1.2rem; }
       .pedido-card .producto .nombre { font-size: 1.2rem; }
@@ -187,126 +173,34 @@
   }
 
   // ================================================================
-  // FUNCION PARA GENERAR TEXTO DE LA COMANDA
+  // FUNCION PRINCIPAL PARA LIMPIAR TEXTO (SIN EMOJIS, SIN ACENTOS)
   // ================================================================
-  function generarTextoComanda(ped, productosOrdenados) {
-    const ahora = new Date();
-    const fecha = ahora.toLocaleDateString('es-MX');
-    const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
-
-    let texto = '';
-    const ANCHO = 32;
-
-    function centrar(t) {
-      const espacios = Math.max(0, Math.floor((ANCHO - t.length) / 2));
-      return ' '.repeat(espacios) + t;
-    }
-
-    function linea(t) {
-      if (t.length > ANCHO) return t.substring(0, ANCHO);
-      return t.padEnd(ANCHO, ' ');
-    }
-
-    texto += '================================\r\n';
-    texto += centrar('MasQueWaffles') + '\r\n';
-    texto += centrar('Comanda') + '\r\n';
-    texto += '================================\r\n';
-    texto += linea('Pedido #' + ped.numeroPedido + ' ' + hora) + '\r\n';
-    texto += '--------------------------------\r\n';
-    texto += ' PRODUCTOS\r\n';
-
-    productosOrdenados.forEach((prod) => {
-      const nombre = prod.nombre.substring(0, ANCHO - 6);
-      texto += '  [ ] ' + nombre + '\r\n';
-      if (prod.nota) {
-        const nota = '   Nota: ' + prod.nota.substring(0, ANCHO - 10);
-        texto += nota + '\r\n';
-      }
-    });
-
-    if (ped.notaPedido) {
-      texto += '\r\n' + 'Nota: ' + ped.notaPedido.substring(0, ANCHO - 6) + '\r\n';
-    }
-
-    texto += '--------------------------------\r\n';
-    texto += linea('Total: $' + ped.total.toFixed(2)) + '\r\n';
-    texto += centrar(fecha) + '\r\n';
-    texto += '================================\r\n';
-
-    return texto;
+  function limpiarTexto(texto) {
+    if (!texto) return '';
+    let limpio = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    limpio = limpio.replace(/[^\x00-\x7F]/g, '');
+    limpio = limpio.replace(/[^a-zA-Z0-9 .,\-$()]/g, ' ');
+    return limpio.trim();
   }
 
   // ================================================================
-  // 🖨️ FUNCION PARA IMPRIMIR POR BLUETOOTH (Web Bluetooth API)
+  // FUNCION PARA DIVIDIR TEXTO EN LINEAS DE MAXIMO N CARACTERES
   // ================================================================
-  async function imprimirPorBluetooth(texto) {
-    try {
-      // Solicitar el dispositivo Bluetooth
-      const device = await navigator.bluetooth.requestDevice({
-        filters: [
-          { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
-          { namePrefix: 'Printer' },
-          { namePrefix: 'POS' },
-          { namePrefix: 'BT' }
-        ],
-        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
-      });
-
-      // Conectar al dispositivo
-      const server = await device.gatt.connect();
-      const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-      const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-
-      // Convertir texto a bytes y enviar
-      const encoder = new TextEncoder();
-      const data = encoder.encode(texto + '\n\n\n');
-      await characteristic.writeValue(data);
-
-      // Desconectar
-      await server.disconnect();
-
-      return true;
-    } catch (error) {
-      console.error('Error al imprimir por Bluetooth:', error);
-      return false;
-    }
-  }
-
-  // ================================================================
-  // FUNCION PRINCIPAL DE IMPRESION
-  // ================================================================
-  async function imprimirComanda(ped, productosOrdenados) {
-    const texto = generarTextoComanda(ped, productosOrdenados);
-
-    // Verificar si el navegador soporta Web Bluetooth
-    if ('bluetooth' in navigator) {
-      try {
-        const resultado = await imprimirPorBluetooth(texto);
-        if (resultado) {
-          alert('✅ ¡Comanda enviada a la impresora!');
-          return;
-        }
-      } catch (e) {
-        console.log('Error en Bluetooth, usando metodo alternativo:', e);
+  function dividirTexto(texto, maxLen) {
+    const palabras = texto.split(' ');
+    const lineas = [];
+    let lineaActual = '';
+    
+    for (let palabra of palabras) {
+      if ((lineaActual + ' ' + palabra).length <= maxLen) {
+        lineaActual += (lineaActual ? ' ' : '') + palabra;
+      } else {
+        if (lineaActual) lineas.push(lineaActual);
+        lineaActual = palabra;
       }
     }
-
-    // METODO ALTERNATIVO: Copiar al portapapeles
-    try {
-      await navigator.clipboard.writeText(texto);
-      alert(
-        '📋 Texto copiado al portapapeles.\n\n' +
-        '1. Abre tu app de impresión (PrintConnect, Thermal Printer, etc.)\n' +
-        '2. Pega el texto y envíalo a la impresora Bluetooth.\n\n' +
-        'También puedes pegar el texto en un bloc de notas y enviarlo.'
-      );
-    } catch (e) {
-      // Si no se puede copiar, mostrar en una ventana
-      const ventana = window.open('', '_blank', 'width=400,height=500');
-      ventana.document.write('<pre style="font-family:Courier;padding:10px;">' + texto + '</pre>');
-      ventana.document.write('<button onclick="window.print()">Imprimir</button>');
-      ventana.document.close();
-    }
+    if (lineaActual) lineas.push(lineaActual);
+    return lineas;
   }
 
   // ================================================================
@@ -351,7 +245,7 @@
 
   function renderPedidos() {
     if (pedidosCache.length === 0) {
-      pedidosContainer.innerHTML = '<div class="sin-pedidos">✅ No hay pedidos activos</div>';
+      pedidosContainer.innerHTML = '<div class="sin-pedidos">No hay pedidos activos</div>';
       return;
     }
     pedidosContainer.innerHTML = '';
@@ -365,9 +259,9 @@
       const cabecera = document.createElement('div');
       cabecera.className = 'cabecera';
       cabecera.innerHTML = `
-        <span>🔢 Pedido #${ped.numeroPedido}</span>
+        <span>Pedido #${ped.numeroPedido}</span>
         <span class="hora">${new Date(ped.fechaHora).toLocaleTimeString()}</span>
-        <span class="estado-pedido ${ped.estadoPedido === 'listo' ? 'listo' : ''}">${ped.estadoPedido === 'listo' ? '✅ LISTO' : '⚙️ EN PREPARACIÓN'}</span>
+        <span class="estado-pedido ${ped.estadoPedido === 'listo' ? 'listo' : ''}">${ped.estadoPedido === 'listo' ? 'LISTO' : 'EN PREPARACION'}</span>
       `;
       card.appendChild(cabecera);
 
@@ -376,34 +270,18 @@
       totalPedidoDiv.textContent = `Total del pedido: $${ped.total.toFixed(2)}`;
       card.appendChild(totalPedidoDiv);
 
-      // Botones para imprimir
       const btnComanda = document.createElement('button');
       btnComanda.className = 'btn-imprimir-comanda';
-      btnComanda.textContent = '🖨️ Imprimir comanda (Bluetooth)';
+      btnComanda.textContent = 'Imprimir comanda (2 copias)';
       btnComanda.addEventListener('click', () => {
         imprimirComanda(ped, productosOrdenados);
       });
       card.appendChild(btnComanda);
 
-      // Boton para copiar texto (alternativo)
-      const btnCopiar = document.createElement('button');
-      btnCopiar.className = 'btn-bluetooth';
-      btnCopiar.textContent = '📋 Copiar texto';
-      btnCopiar.addEventListener('click', async () => {
-        const texto = generarTextoComanda(ped, productosOrdenados);
-        try {
-          await navigator.clipboard.writeText(texto);
-          alert('✅ Texto copiado al portapapeles. Pégalo en tu app de impresión.');
-        } catch (e) {
-          alert('No se pudo copiar. Selecciona el texto manualmente.');
-        }
-      });
-      card.appendChild(btnCopiar);
-
       if (ped.notaPedido) {
         const notaDiv = document.createElement('div');
         notaDiv.className = 'nota-pedido';
-        notaDiv.innerHTML = `<strong>📝 Nota del pedido:</strong> ${ped.notaPedido}`;
+        notaDiv.innerHTML = `<strong>Nota del pedido:</strong> ${ped.notaPedido}`;
         card.appendChild(notaDiv);
       }
 
@@ -412,17 +290,17 @@
         prodDiv.className = 'producto';
         if (prod.estadoProducto === 'listo') prodDiv.classList.add('listo');
 
-        const estadoTexto = prod.estadoProducto === 'listo' ? '✅ LISTO' : '⏳ PREPARANDO';
+        const estadoTexto = prod.estadoProducto === 'listo' ? 'LISTO' : 'PREPARANDO';
         prodDiv.innerHTML = `
           <div class="nombre">
             <span>${prod.nombre} <span class="estado-icono">${estadoTexto}</span></span>
             <span class="precio">$${prod.precio}</span>
           </div>
-          <div class="ingredientes">🧾 ${prod.ingredientes || 'Sin ingredientes'}</div>
-          ${prod.nota ? `<div class="nota">📌 Nota: ${prod.nota}</div>` : ''}
+          <div class="ingredientes">${prod.ingredientes || 'Sin ingredientes'}</div>
+          ${prod.nota ? `<div class="nota">Nota: ${prod.nota}</div>` : ''}
           <div class="acciones-producto">
-            <button class="btn-producto btn-listo" data-pedido="${ped.id}" data-producto="${idx}" ${prod.estadoProducto === 'listo' ? 'disabled' : ''}>✅ Listo</button>
-            <button class="btn-producto btn-cancelar" data-pedido="${ped.id}" data-producto="${idx}">❌ Cancelar</button>
+            <button class="btn-producto btn-listo" data-pedido="${ped.id}" data-producto="${idx}" ${prod.estadoProducto === 'listo' ? 'disabled' : ''}>Listo</button>
+            <button class="btn-producto btn-cancelar" data-pedido="${ped.id}" data-producto="${idx}">Cancelar</button>
           </div>
         `;
         card.appendChild(prodDiv);
@@ -450,7 +328,7 @@
               await updateDoc(doc(db, 'pedidos', ped.id), { productos });
             } catch (e) { alert('Error: ' + e.message); }
           } else {
-            const eliminar = confirm('Este producto aún no está listo. ¿Deseas eliminarlo del pedido?');
+            const eliminar = confirm('Este producto aun no esta listo. Deseas eliminarlo del pedido?');
             if (eliminar) {
               const nuevosProductos = ped.productos.filter((_, i) => i !== idx);
               try {
@@ -465,7 +343,7 @@
       if (todosListos && ped.estadoPedido !== 'listo') {
         const btnPedidoListo = document.createElement('button');
         btnPedidoListo.className = 'btn-pedido-listo';
-        btnPedidoListo.textContent = '✅ Marcar pedido como LISTO';
+        btnPedidoListo.textContent = 'Marcar pedido como LISTO';
         btnPedidoListo.addEventListener('click', async () => {
           try {
             await updateDoc(doc(db, 'pedidos', ped.id), { estadoPedido: 'listo' });
@@ -476,6 +354,148 @@
 
       pedidosContainer.appendChild(card);
     });
+  }
+
+  // ================================================================
+  // 🖨️ FUNCION PARA IMPRIMIR COMANDAS (TEXTO COMPLETO, SIN RECORTAR)
+  // ================================================================
+  function imprimirComanda(ped, productosOrdenados) {
+    const ahora = new Date();
+    const fecha = ahora.toLocaleDateString('es-MX');
+    const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    const ANCHO = 30;
+    let texto = '';
+    const numeroCopias = 2;
+
+    function centrar(t) {
+      const limpio = limpiarTexto(t);
+      const espacios = Math.max(0, Math.floor((ANCHO - limpio.length) / 2));
+      return ' '.repeat(espacios) + limpio;
+    }
+
+    function lineaConContenido(contenido) {
+      const limpio = limpiarTexto(contenido);
+      if (limpio.length > ANCHO) {
+        return limpio.substring(0, ANCHO);
+      }
+      return limpio.padEnd(ANCHO, ' ');
+    }
+
+    for (let copia = 1; copia <= numeroCopias; copia++) {
+      texto += '\r\n';
+      texto += '================================\r\n';
+      texto += centrar('MasQueWaffles') + '\r\n';
+      texto += centrar('Comanda ' + copia + ' de ' + numeroCopias) + '\r\n';
+      texto += '================================\r\n';
+      texto += lineaConContenido('Pedido #' + ped.numeroPedido + ' ' + hora) + '\r\n';
+      texto += '--------------------------------\r\n';
+      texto += ' PRODUCTOS\r\n';
+
+      productosOrdenados.forEach((prod) => {
+        const nombreLimpio = limpiarTexto(prod.nombre);
+        // Dividir el nombre en lineas si es muy largo
+        const lineasNombre = dividirTexto(nombreLimpio, ANCHO - 6);
+        lineasNombre.forEach((linea, idx) => {
+          if (idx === 0) {
+            texto += '  [ ] ' + linea + '\r\n';
+          } else {
+            texto += '       ' + linea + '\r\n';
+          }
+        });
+        
+        if (prod.nota) {
+          const notaLimpia = limpiarTexto('Nota: ' + prod.nota);
+          const lineasNota = dividirTexto(notaLimpia, ANCHO - 4);
+          lineasNota.forEach(linea => {
+            texto += '     ' + linea + '\r\n';
+          });
+        }
+      });
+
+      if (ped.notaPedido) {
+        const notaPedidoLimpia = limpiarTexto('Nota: ' + ped.notaPedido);
+        const lineasNotaPedido = dividirTexto(notaPedidoLimpia, ANCHO - 2);
+        texto += '\r\n';
+        lineasNotaPedido.forEach(linea => {
+          texto += '  ' + linea + '\r\n';
+        });
+      }
+
+      texto += '--------------------------------\r\n';
+      texto += lineaConContenido('Total: $' + ped.total.toFixed(2)) + '\r\n';
+      texto += centrar(fecha) + '\r\n';
+      texto += '================================\r\n';
+      texto += '\r\n';
+    }
+
+    // Crear ventana de impresion
+    const ventana = window.open('', '_blank', 'width=400,height=600');
+    ventana.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Comanda #${ped.numeroPedido}</title>
+        <style>
+          body { 
+            font-family: 'Courier New', monospace; 
+            background: white; 
+            color: black; 
+            padding: 0; 
+            margin: 0;
+            max-width: 80mm;
+            margin: 0 auto;
+          }
+          @page { 
+            size: 80mm 297mm; 
+            margin: 0mm; 
+          }
+          @media print {
+            body { padding: 0; margin: 0; }
+            .no-print { display: none !important; }
+          }
+          .no-print { 
+            text-align: center; 
+            padding: 8px; 
+            border-top: 1px solid #ccc; 
+            font-family: Arial, sans-serif;
+            max-width: 80mm;
+          }
+          .no-print button { 
+            padding: 6px 16px; 
+            border: none; 
+            border-radius: 20px; 
+            font-size: 0.8rem; 
+            cursor: pointer; 
+            margin: 0 4px; 
+          }
+          .btn-print { background: #2196f3; color: white; }
+          .btn-close { background: #ccc; color: #333; }
+          pre {
+            margin: 0;
+            padding: 2mm 2mm;
+            font-family: 'Courier New', monospace;
+            font-size: 9pt;
+            line-height: 1.3;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+          }
+        </style>
+      </head>
+      <body>
+        <pre>${texto}</pre>
+        <div class="no-print">
+          <button class="btn-print" onclick="window.print()">Imprimir</button>
+          <button class="btn-close" onclick="window.close()">Cerrar</button>
+          <div style="margin-top:4px;font-size:0.7rem;color:#999;">Se imprimiran 2 copias</div>
+        </div>
+        <script>
+          setTimeout(function() { window.print(); }, 800);
+        <\/script>
+      </body>
+      </html>
+    `);
+    ventana.document.close();
   }
 
   // ================================================================
