@@ -148,7 +148,7 @@
   }
 
   // ================================================================
-  // 🧹 FUNCIÓN PARA ORDENAR PRODUCTOS POR GRUPO (SIN AGRUPAR CANTIDADES)
+  // 🧹 FUNCIÓN PARA ORDENAR PRODUCTOS POR GRUPO
   // ================================================================
   function ordenarProductos(productos) {
     const ordenGrupos = {
@@ -348,7 +348,7 @@
   }
 
   // ================================================================
-  // 🖨️ FUNCIÓN PARA IMPRIMIR COMANDAS (SIN INGREDIENTES, ORDENADO POR GRUPOS)
+  // 🖨️ FUNCIÓN PARA IMPRIMIR COMANDAS CON CUADROS PARA PALOMEAR
   // ================================================================
   function imprimirComanda(ped, productosOrdenados) {
     const ahora = new Date();
@@ -360,33 +360,34 @@
 
     for (let copia = 1; copia <= numeroCopias; copia++) {
       contenido += `
-        <div style="page-break-after: always; padding: 12px 16px; max-width: 300px; margin: 0 auto; font-family: 'Courier New', monospace; font-size: 0.85rem;">
+        <div style="page-break-after: always; padding: 10px 14px; max-width: 300px; margin: 0 auto; font-family: 'Courier New', monospace; font-size: 0.8rem;">
           <div style="text-align: center; border-bottom: 2px dashed #333; padding-bottom: 6px;">
-            <h1 style="font-size: 1.4rem; margin: 0; color: #da291c; letter-spacing: 1px;">🧇 MasQueWaffles</h1>
-            <div style="font-size: 0.7rem; color: #555;">Comanda #${copia} de ${numeroCopias}</div>
+            <h1 style="font-size: 1.3rem; margin: 0; color: #da291c; letter-spacing: 1px;">🧇 MasQueWaffles</h1>
+            <div style="font-size: 0.65rem; color: #555;">Comanda #${copia} de ${numeroCopias}</div>
           </div>
           <div style="padding: 4px 0; border-bottom: 1px dashed #ccc;">
-            <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 0.9rem;">
+            <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 0.85rem;">
               <span>Pedido #${ped.numeroPedido}</span>
               <span>${hora}</span>
             </div>
           </div>
           <div style="padding: 4px 0;">
-            <div style="font-weight: bold; font-size: 0.85rem; border-bottom: 1px solid #ccc; margin-bottom: 2px;">📋 PRODUCTOS</div>
+            <div style="font-weight: bold; font-size: 0.8rem; border-bottom: 1px solid #ccc; margin-bottom: 2px;">📋 PRODUCTOS</div>
       `;
 
-      // Cada producto en su propia línea (sin agrupar cantidades)
-      productosOrdenados.forEach((prod, idx) => {
+      // Cada producto con su cuadrito [ ] para palomear
+      productosOrdenados.forEach((prod) => {
         contenido += `
-          <div style="padding: 2px 0; display: flex; justify-content: space-between; font-size: 0.85rem;">
-            <span>${prod.nombre}</span>
-            <span>$${prod.precio}</span>
+          <div style="padding: 2px 0; display: flex; justify-content: flex-start; align-items: center; font-size: 0.8rem; gap: 4px;">
+            <span style="display: inline-block; width: 14px; height: 14px; border: 1.5px solid #333; flex-shrink: 0; margin-right: 4px;"></span>
+            <span style="flex: 1;">${prod.nombre}</span>
+            <span style="font-weight: bold; flex-shrink: 0;">$${prod.precio}</span>
           </div>
         `;
         // Nota del producto si existe
         if (prod.nota) {
           contenido += `
-            <div style="padding: 0 0 2px 12px; font-size: 0.75rem; color: #da291c; font-style: italic;">
+            <div style="padding: 0 0 2px 22px; font-size: 0.7rem; color: #da291c; font-style: italic;">
               📝 ${prod.nota}
             </div>
           `;
@@ -395,7 +396,7 @@
 
       if (ped.notaPedido) {
         contenido += `
-          <div style="padding: 4px 0; font-size: 0.8rem; color: #da291c; border-top: 1px dashed #ccc; margin-top: 2px;">
+          <div style="padding: 4px 0; font-size: 0.75rem; color: #da291c; border-top: 1px dashed #ccc; margin-top: 2px;">
             📝 ${ped.notaPedido}
           </div>
         `;
@@ -404,8 +405,8 @@
       contenido += `
           </div>
           <div style="border-top: 2px dashed #333; padding-top: 4px; text-align: center;">
-            <div style="font-size: 1rem; font-weight: bold;">Total: $${ped.total.toFixed(2)}</div>
-            <div style="font-size: 0.65rem; color: #888; margin-top: 2px;">${fecha}</div>
+            <div style="font-size: 0.95rem; font-weight: bold;">Total: $${ped.total.toFixed(2)}</div>
+            <div style="font-size: 0.6rem; color: #888; margin-top: 2px;">${fecha}</div>
           </div>
         </div>
       `;
