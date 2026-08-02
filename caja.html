@@ -126,6 +126,27 @@
       .grid-categorias { grid-template-columns: repeat(2, 1fr); }
       .header h1 { font-size: 1.4rem; }
     }
+    /* Estilos para el asistente de crepa */
+    .crepa-resumen {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 12px;
+      margin: 12px 0;
+      border: 2px solid #da291c;
+    }
+    .crepa-resumen .item {
+      display: inline-block;
+      background: #da291c;
+      color: white;
+      padding: 2px 10px;
+      border-radius: 20px;
+      margin: 2px 4px 2px 0;
+      font-size: 0.8rem;
+    }
+    .crepa-resumen .label {
+      font-weight: bold;
+      color: #333;
+    }
   </style>
 </head>
 <body>
@@ -437,7 +458,7 @@
   }
 
   // ================================================================
-  // MODAL DE PRODUCTOS (CON X PARA CERRAR Y TECLA ESC)
+  // MODAL DE PRODUCTOS
   // ================================================================
   function abrirModalCategoria(cat) {
     modalContenido.innerHTML = '';
@@ -494,7 +515,7 @@
     
     modalSubproductos.style.display = 'flex';
 
-    // ✅ TECLA ESC PARA CERRAR
+    // Tecla ESC para cerrar
     const cerrarConEsc = function(e) {
       if (e.key === 'Escape') {
         modalSubproductos.style.display = 'none';
@@ -505,16 +526,18 @@
   }
 
   // ================================================================
-  // ASISTENTE DE CREPA (CON X PARA CERRAR)
+  // ASISTENTE DE CREPA (CON MÚLTIPLES SELECCIONES)
   // ================================================================
   function abrirAsistenteCrepa() {
-    const pasos = [
-      { titulo: 'Paso 1: Elige el sabor', opciones: ['Nutella', 'Merm.Fresa', 'Merm.Zarzamora', 'Lechera', 'Cajeta', 'Philadelphia'] },
-      { titulo: 'Paso 2: Elige la fruta', opciones: ['Fresas', 'Plátano', 'Durazno', 'Sin fruta'] },
-      { titulo: 'Paso 3: Elige el topping', opciones: ['Nuez', 'Chispas Chocolate', 'Almendras', 'Sin topping'] }
-    ];
-    let seleccionados = ['', '', ''];
-    let pasoActual = 0;
+    // Opciones
+    const sabores = ['Nutella', 'Merm.Fresa', 'Merm.Zarzamora', 'Lechera', 'Cajeta', 'Philadelphia'];
+    const frutas = ['Fresas', 'Plátano', 'Durazno', 'Sin fruta'];
+    const toppings = ['Nuez', 'Chispas Chocolate', 'Almendras', 'Sin topping'];
+
+    // Estado de selecciones (arrays)
+    let saboresSeleccionados = [];
+    let frutasSeleccionadas = [];
+    let toppingsSeleccionados = [];
 
     modalContenido.innerHTML = '';
     const titulo = document.createElement('h3');
@@ -527,54 +550,107 @@
     closeBtn.addEventListener('click', () => { modalSubproductos.style.display = 'none'; });
     modalContenido.appendChild(closeBtn);
 
-    function renderPaso() {
-      modalContenido.innerHTML = '';
-      modalContenido.appendChild(titulo);
-      const closeBtnInner = document.createElement('button');
-      closeBtnInner.className = 'modal-close';
-      closeBtnInner.textContent = '✕';
-      closeBtnInner.addEventListener('click', () => { modalSubproductos.style.display = 'none'; });
-      modalContenido.appendChild(closeBtnInner);
+    // Contenedor de resumen
+    const resumenDiv = document.createElement('div');
+    resumenDiv.className = 'crepa-resumen';
+    resumenDiv.id = 'resumenCrepa';
+    resumenDiv.innerHTML = `
+      <div><span class="label">🍫 Sabores:</span> <span id="resumenSabores" style="color:#666;">(ninguno)</span></div>
+      <div><span class="label">🍓 Frutas:</span> <span id="resumenFrutas" style="color:#666;">(ninguna)</span></div>
+      <div><span class="label">🥜 Toppings:</span> <span id="resumenToppings" style="color:#666;">(ninguno)</span></div>
+    `;
+    modalContenido.appendChild(resumenDiv);
 
-      const pasoDiv = document.createElement('div');
-      pasoDiv.innerHTML = `<div class="paso-titulo">${pasos[pasoActual].titulo}</div><div class="sub-opciones"></div>`;
-      const contenedorOpciones = pasoDiv.querySelector('.sub-opciones');
-      pasos[pasoActual].opciones.forEach(op => {
+    function actualizarResumen() {
+      document.getElementById('resumenSabores').textContent = saboresSeleccionados.length > 0 ? saboresSeleccionados.join(', ') : '(ninguno)';
+      document.getElementById('resumenFrutas').textContent = frutasSeleccionadas.length > 0 ? frutasSeleccionadas.join(', ') : '(ninguna)';
+      document.getElementById('resumenToppings').textContent = toppingsSeleccionados.length > 0 ? toppingsSeleccionados.join(', ') : '(ninguno)';
+    }
+
+    // Función para crear sección de selección múltiple
+    function crearSeccion(titulo, opciones, estadoArray, idContenedor, actualizar) {
+      const container = document.createElement('div');
+      container.style.marginBottom = '12px';
+      container.innerHTML = `<div style="font-weight:bold;margin-bottom:6px;">${titulo} (elige varios)</div><div class="sub-opciones" id="${idContenedor}"></div>`;
+      const contenedorOpciones = container.querySelector('.sub-opciones');
+      
+      opciones.forEach(op => {
         const btn = document.createElement('button');
         btn.textContent = op;
-        if (seleccionados[pasoActual] === op) btn.classList.add('seleccionado');
         btn.addEventListener('click', () => {
-          seleccionados[pasoActual] = op;
-          if (pasoActual < 2) {
-            pasoActual++;
-            renderPaso();
+          const idx = estadoArray.indexOf(op);
+          if (idx === -1) {
+            estadoArray.push(op);
+            btn.classList.add('seleccionado');
           } else {
-            const nombreCompleto = `Crepa Normal - ${seleccionados[0]} - ${seleccionados[1]} - ${seleccionados[2]}`;
-            const ingredientes = `Masa de crepa, ${seleccionados[0]}, ${seleccionados[1]}, ${seleccionados[2]}`;
-            const precio = 45;
-            agregarProducto({ nombre: nombreCompleto, precio, ingredientes });
+            estadoArray.splice(idx, 1);
+            btn.classList.remove('seleccionado');
           }
+          // Si se selecciona "Sin fruta", quitar otras frutas
+          if (titulo.includes('Fruta') && op === 'Sin fruta') {
+            if (estadoArray.includes('Sin fruta') && estadoArray.length > 1) {
+              estadoArray = ['Sin fruta'];
+              // Actualizar botones
+              const btns = contenedorOpciones.querySelectorAll('button');
+              btns.forEach(b => {
+                if (b.textContent === 'Sin fruta') {
+                  b.classList.add('seleccionado');
+                } else {
+                  b.classList.remove('seleccionado');
+                }
+              });
+              // Actualizar estado de frutas
+              frutasSeleccionadas = ['Sin fruta'];
+            }
+          }
+          actualizar();
         });
         contenedorOpciones.appendChild(btn);
       });
-      if (pasoActual > 0) {
-        const btnAtras = document.createElement('button');
-        btnAtras.textContent = '← Atrás';
-        btnAtras.style.marginTop = '12px';
-        btnAtras.addEventListener('click', () => {
-          pasoActual--;
-          renderPaso();
-        });
-        pasoDiv.appendChild(btnAtras);
-      }
-      modalContenido.appendChild(pasoDiv);
-      const cerrar = document.createElement('button');
-      cerrar.className = 'cerrar-modal';
-      cerrar.textContent = 'Cancelar';
-      cerrar.addEventListener('click', () => { modalSubproductos.style.display = 'none'; });
-      modalContenido.appendChild(cerrar);
+      return container;
     }
-    renderPaso();
+
+    // Crear secciones
+    modalContenido.appendChild(crearSeccion('🍫 Sabores (elige varios)', sabores, saboresSeleccionados, 'saboresContainer', actualizarResumen));
+    modalContenido.appendChild(crearSeccion('🍓 Frutas (elige varias)', frutas, frutasSeleccionadas, 'frutasContainer', actualizarResumen));
+    modalContenido.appendChild(crearSeccion('🥜 Toppings (elige varios)', toppings, toppingsSeleccionados, 'toppingsContainer', actualizarResumen));
+
+    // Botón "Agregar crepa"
+    const btnAgregar = document.createElement('button');
+    btnAgregar.className = 'btn-principal';
+    btnAgregar.textContent = '✅ Agregar crepa';
+    btnAgregar.style.marginTop = '12px';
+    btnAgregar.style.width = '100%';
+    btnAgregar.addEventListener('click', () => {
+      if (saboresSeleccionados.length === 0) {
+        alert('Selecciona al menos un sabor.');
+        return;
+      }
+      if (frutasSeleccionadas.length === 0) {
+        alert('Selecciona al menos una fruta.');
+        return;
+      }
+      if (toppingsSeleccionados.length === 0) {
+        alert('Selecciona al menos un topping.');
+        return;
+      }
+
+      const nombreCrepa = `Crepa Normal - ${saboresSeleccionados.join(' + ')} - ${frutasSeleccionadas.join(' + ')} - ${toppingsSeleccionados.join(' + ')}`;
+      const ingredientes = `Masa de crepa, ${saboresSeleccionados.join(', ')}, ${frutasSeleccionadas.join(', ')}, ${toppingsSeleccionados.join(', ')}`;
+      
+      agregarProducto({ nombre: nombreCrepa, precio: 45, ingredientes: ingredientes });
+      modalSubproductos.style.display = 'none';
+    });
+    modalContenido.appendChild(btnAgregar);
+
+    // Botón cancelar
+    const cerrar = document.createElement('button');
+    cerrar.className = 'cerrar-modal';
+    cerrar.textContent = 'Cancelar';
+    cerrar.addEventListener('click', () => { modalSubproductos.style.display = 'none'; });
+    modalContenido.appendChild(cerrar);
+
+    modalSubproductos.style.display = 'flex';
   }
 
   // ================================================================
@@ -685,7 +761,7 @@
   });
 
   // ================================================================
-  // GENERAR EXCEL (ORDENADO, SOLO ENTREGADOS, CON TOTAL)
+  // GENERAR EXCEL
   // ================================================================
   btnExcel.addEventListener('click', async () => {
     const pedidos = await getPedidosTurno();
@@ -748,7 +824,7 @@
   });
 
   // ================================================================
-  // PEDIDOS EN CURSO (TIEMPO REAL) CON BOTÓN CANCELAR
+  // PEDIDOS EN CURSO (TIEMPO REAL)
   // ================================================================
   function iniciarEscuchaPedidos() {
     const q = query(collection(db, 'pedidos'), orderBy('fechaHora', 'desc'));
@@ -837,7 +913,7 @@
       btnCancelarPedido.className = 'btn-cancelar-pedido';
       btnCancelarPedido.textContent = '✕ Cancelar pedido';
       btnCancelarPedido.addEventListener('click', async () => {
-        if (confirm(`¿Cancelar el pedido #${ped.numeroPedido}? Esta acción eliminará el pedido y no se contará en las ventas.`)) {
+        if (confirm(`¿Cancelar el pedido #${ped.numeroPedido}?`)) {
           try {
             await deleteDoc(doc(db, 'pedidos', ped.id));
             pedidosCache = pedidosCache.filter(p => p.id !== ped.id);
@@ -896,7 +972,7 @@
   }
 
   // ================================================================
-  // INICIALIZACIÓN CON AUTENTICACIÓN
+  // INICIALIZACIÓN
   // ================================================================
   signInAnonymously(auth)
     .then(() => {
@@ -905,7 +981,7 @@
     })
     .catch((error) => {
       console.error('Error de autenticación:', error);
-      alert('No se pudo conectar con la base de datos. Revisa tu conexión y las llaves de Firebase.');
+      alert('No se pudo conectar con la base de datos.');
     });
 
   async function iniciarApp() {
