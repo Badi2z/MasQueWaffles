@@ -284,14 +284,15 @@
   }
 
   // ================================================================
-  // 📋 FUNCION PARA GENERAR TEXTO DE LA COMANDA (PARA BLUETOOTH)
+  // 📋 FUNCION PARA GENERAR TEXTO DE LA COMANDA (CON ESPACIO Y LETRAS GRANDES)
   // ================================================================
   function generarTextoComanda(ped, productosOrdenados) {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    const ANCHO = 48;
+    // ✅ ANCHO PARA 80mm: 40 caracteres por línea (letras más grandes)
+    const ANCHO = 40;
     
     function centrar(t) {
       const espacios = Math.max(0, Math.floor((ANCHO - t.length) / 2));
@@ -320,6 +321,10 @@
     }
 
     let texto = '';
+    
+    // 🔹 ESPACIO SUPERIOR (5mm = ~3 líneas en blanco)
+    texto += '\n\n\n';
+    
     texto += '='.repeat(ANCHO) + '\n';
     texto += centrar('MasQueWaffles') + '\n';
     texto += centrar('Comanda') + '\n';
@@ -332,6 +337,7 @@
       const nombreProducto = prod.nombre;
       const precio = '$' + prod.precio.toFixed(2);
       
+      // Ajuste para letras más grandes: menos caracteres por línea
       if (nombreProducto.length + precio.length + 6 <= ANCHO) {
         const espacios = ANCHO - 6 - nombreProducto.length - precio.length;
         texto += '  [ ] ' + nombreProducto + ' '.repeat(Math.max(0, espacios)) + precio + '\n';
@@ -368,6 +374,9 @@
     texto += linea('Total: $' + ped.total.toFixed(2)) + '\n';
     texto += centrar(fecha) + '\n';
     texto += '='.repeat(ANCHO) + '\n';
+    
+    // 🔹 ESPACIO INFERIOR (5mm = ~3 líneas en blanco)
+    texto += '\n\n\n';
 
     return texto;
   }
@@ -435,7 +444,7 @@
             padding: 20px; 
             margin: 0;
             white-space: pre-wrap;
-            font-size: 10pt;
+            font-size: 11pt;
             max-width: 80mm;
           }
           @media print { body { padding: 0; margin: 0; } .no-print { display: none; } }
@@ -500,7 +509,7 @@
   }
 
   // ================================================================
-  // 🖨️ METODO 3: Android (Web Bluetooth) - CORREGIDO
+  // 🖨️ METODO 3: Android (Web Bluetooth) - CON ESPACIO Y LETRAS GRANDES
   // ================================================================
   async function imprimirAndroid(ped, productosOrdenados) {
     const texto = generarTextoComanda(ped, productosOrdenados);
@@ -540,7 +549,7 @@
       
       console.log('📤 Texto completo enviado a la impresora');
 
-      // Esperar 2 segundos antes de cortar
+      // Esperar 2.5 segundos antes de cortar (más tiempo para texto más grande)
       setTimeout(async () => {
         try {
           const corte = new Uint8Array([0x1B, 0x69]);
@@ -551,7 +560,7 @@
           console.log('No se pudo enviar corte:', e);
           alert('✅ Comanda enviada (corte no disponible)');
         }
-      }, 2000);
+      }, 2500);
 
     } catch (error) {
       console.error('Error al imprimir:', error);
