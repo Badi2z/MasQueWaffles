@@ -193,118 +193,14 @@
   }
 
   // ================================================================
-  // 🖨️ FUNCION PARA IMPRIMIR COMANDAS (VERSION BPRINT)
+  // 🖨️ FUNCION PARA IMPRIMIR (CON INTENT Y COPIA MANUAL)
   // ================================================================
   function imprimirComanda(ped, productosOrdenados) {
-    // Obtener fecha y hora
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    // Construir los datos del pedido para enviar a response.html
-    const data = {
-      numeroPedido: ped.numeroPedido,
-      hora: hora,
-      fecha: fecha,
-      productos: productosOrdenados,
-      total: ped.total,
-      notaPedido: ped.notaPedido || ''
-    };
-
-    // Codificar datos como JSON
-    const jsonData = encodeURIComponent(JSON.stringify(data));
-
-    // Construir la URL de respuesta con los datos
-    const baseUrl = 'https://badi2z.github.io/MasQueWaffles/response.html';
-    const urlResponse = baseUrl + '?data=' + jsonData;
-
-    // ================================================================
-    // 🟢 METODO 1: bprint:// (para iOS y Android)
-    // ================================================================
-    const bprintUrl = 'bprint://' + urlResponse;
-
-    // ================================================================
-    // 🟢 METODO 2: Intent para Android (alternativa)
-    // ================================================================
-    const intentUrl = 'intent://' + urlResponse + '#Intent;scheme=bprint;action=android.intent.action.VIEW;end';
-
-    // ================================================================
-    // 🟢 METODO 3: Thermer (alternativa)
-    // ================================================================
-    // Crear el array de entradas para Thermer
-    let printEntries = [];
-    
-    // Título
-    printEntries.push({ type: 0, content: 'MasQueWaffles', bold: 1, align: 1, format: 1 });
-    printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
-    printEntries.push({ type: 0, content: 'Pedido #' + ped.numeroPedido + '  ' + hora, bold: 1, align: 0, format: 0 });
-    printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
-
-    productosOrdenados.forEach((prod) => {
-      printEntries.push({ type: 0, content: '  [ ] ' + prod.nombre + ' - $' + prod.precio.toFixed(2), bold: 0, align: 0, format: 0 });
-      if (prod.nota) {
-        printEntries.push({ type: 0, content: '   Nota: ' + prod.nota, bold: 0, align: 0, format: 0 });
-      }
-    });
-
-    if (ped.notaPedido) {
-      printEntries.push({ type: 0, content: 'Nota: ' + ped.notaPedido, bold: 0, align: 0, format: 0 });
-    }
-
-    printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
-    printEntries.push({ type: 0, content: 'Total: $' + ped.total.toFixed(2), bold: 1, align: 1, format: 1 });
-    printEntries.push({ type: 0, content: fecha, bold: 0, align: 1, format: 0 });
-
-    const thermerJson = JSON.stringify(printEntries);
-    const thermerUrl = 'thermer://print?data=' + encodeURIComponent(thermerJson);
-
-    // ================================================================
-    // 🚀 PROBAR TODOS LOS METODOS (el que funcione, se quedará)
-    // ================================================================
-
-    // Mostrar opciones al usuario
-    const opcion = confirm(
-      '🖨️ Selecciona el método de impresión:\n\n' +
-      '✅ "Aceptar" → Abrir con bprint:// (recomendado)\n' +
-      '❌ "Cancelar" → Copiar texto manualmente'
-    );
-
-    if (opcion) {
-      // Intentar primero con bprint://
-      try {
-        window.location.href = bprintUrl;
-        console.log('🔗 Intentando bprint://', bprintUrl);
-        
-        // Si después de 2 segundos no funciona, intentar con Thermer
-        setTimeout(() => {
-          try {
-            window.location.href = thermerUrl;
-            console.log('🔗 Intentando thermer://', thermerUrl);
-          } catch (e) {}
-        }, 1500);
-
-        // Si después de 3 segundos no funciona, mostrar mensaje
-        setTimeout(() => {
-          alert('⚠️ Si la app no se abrió automáticamente:\n\n' +
-                '1. Abre "Bluetooth Print" o "Thermer"\n' +
-                '2. Pega el texto manualmente\n' +
-                '3. O usa el método de copiar/pegar');
-        }, 3000);
-      } catch (e) {
-        alert('❌ Error al abrir la app. Usa el método manual.');
-        // Mostrar el texto para copiar
-        mostrarTextoManual(ped, productosOrdenados, fecha, hora);
-      }
-    } else {
-      // Método manual
-      mostrarTextoManual(ped, productosOrdenados, fecha, hora);
-    }
-  }
-
-  // ================================================================
-  // 📋 FUNCION PARA MOSTRAR TEXTO MANUAL (copiar/pegar)
-  // ================================================================
-  function mostrarTextoManual(ped, productosOrdenados, fecha, hora) {
+    // Generar texto de la comanda
     let texto = '';
     texto += '================================\n';
     texto += '       MasQueWaffles\n';
@@ -330,13 +226,102 @@
     texto += '         ' + fecha + '\n';
     texto += '================================\n';
 
-    // Abrir ventana con el texto
+    // Codificar texto para URL
+    const textoEncoded = encodeURIComponent(texto);
+
+    // ================================================================
+    // 🟢 METODO 1: Intent para Android
+    // ================================================================
+    const intentUrl = 'intent://print?text=' + textoEncoded +
+      '#Intent;scheme=bprint;package=com.mate.bluetoothprint;action=android.intent.action.VIEW;end';
+
+    // ================================================================
+    // 🟢 METODO 2: bprint://
+    // ================================================================
+    const bprintUrl = 'bprint://print?text=' + textoEncoded;
+
+    // ================================================================
+    // 🟢 METODO 3: Thermer
+    // ================================================================
+    let printEntries = [];
+    printEntries.push({ type: 0, content: 'MasQueWaffles', bold: 1, align: 1, format: 1 });
+    printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
+    printEntries.push({ type: 0, content: 'Pedido #' + ped.numeroPedido + '  ' + hora, bold: 1, align: 0, format: 0 });
+    printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
+
+    productosOrdenados.forEach((prod) => {
+      printEntries.push({ type: 0, content: '  [ ] ' + prod.nombre + ' - $' + prod.precio.toFixed(2), bold: 0, align: 0, format: 0 });
+      if (prod.nota) {
+        printEntries.push({ type: 0, content: '   Nota: ' + prod.nota, bold: 0, align: 0, format: 0 });
+      }
+    });
+
+    if (ped.notaPedido) {
+      printEntries.push({ type: 0, content: 'Nota: ' + ped.notaPedido, bold: 0, align: 0, format: 0 });
+    }
+
+    printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
+    printEntries.push({ type: 0, content: 'Total: $' + ped.total.toFixed(2), bold: 1, align: 1, format: 1 });
+    printEntries.push({ type: 0, content: fecha, bold: 0, align: 1, format: 0 });
+
+    const thermerJson = JSON.stringify(printEntries);
+    const thermerUrl = 'thermer://print?data=' + encodeURIComponent(thermerJson);
+
+    // ================================================================
+    // 🚀 MOSTRAR OPCIONES AL USUARIO
+    // ================================================================
+    const opcion = confirm(
+      '🖨️ Elige cómo imprimir:\n\n' +
+      '✅ "Aceptar" → Intentar abrir app Bluetooth\n' +
+      '❌ "Cancelar" → Copiar texto manualmente'
+    );
+
+    if (opcion) {
+      // Intentar todos los métodos
+      try {
+        window.location.href = intentUrl;
+        console.log('🔗 Intentando intent://');
+      } catch (e) {}
+
+      setTimeout(() => {
+        try {
+          window.location.href = bprintUrl;
+          console.log('🔗 Intentando bprint://');
+        } catch (e) {}
+      }, 500);
+
+      setTimeout(() => {
+        try {
+          window.location.href = thermerUrl;
+          console.log('🔗 Intentando thermer://');
+        } catch (e) {}
+      }, 1000);
+
+      setTimeout(() => {
+        alert(
+          '⚠️ Si la app no se abrió automáticamente:\n\n' +
+          '1. Abre la app de impresión manualmente\n' +
+          '2. Busca la opción "Print Text"\n' +
+          '3. Pega el texto y envía a imprimir\n\n' +
+          'Presiona "Aceptar" para ver el texto.'
+        );
+        mostrarTextoManual(texto);
+      }, 2000);
+    } else {
+      mostrarTextoManual(texto);
+    }
+  }
+
+  // ================================================================
+  // 📋 FUNCION PARA MOSTRAR TEXTO MANUAL
+  // ================================================================
+  function mostrarTextoManual(texto) {
     const ventana = window.open('', '_blank', 'width=400,height=500');
     ventana.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Comanda #${ped.numeroPedido}</title>
+        <title>Comanda</title>
         <style>
           body { 
             font-family: 'Courier New', monospace; 
@@ -380,7 +365,6 @@
             navigator.clipboard.writeText(texto).then(() => {
               alert('✅ Texto copiado al portapapeles');
             }).catch(() => {
-              // Método alternativo
               const textarea = document.createElement('textarea');
               textarea.value = \`${texto}\`;
               document.body.appendChild(textarea);
