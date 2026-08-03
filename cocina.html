@@ -284,7 +284,7 @@
   }
 
   // ================================================================
-  // 📋 FUNCION PARA GENERAR TEXTO DE LA COMANDA (CON ESPACIO Y LETRAS GRANDES)
+  // 📋 FUNCION PARA GENERAR TEXTO DE LA COMANDA (ESPACIOS AJUSTADOS)
   // ================================================================
   function generarTextoComanda(ped, productosOrdenados) {
     const ahora = new Date();
@@ -322,8 +322,8 @@
 
     let texto = '';
     
-    // 🔹 ESPACIO SUPERIOR (5mm = ~3 líneas en blanco)
-    texto += '\n\n\n';
+    // 🔹 ESPACIO SUPERIOR: 2 líneas en blanco (~0.2 cm)
+    texto += '\n\n';
     
     texto += '='.repeat(ANCHO) + '\n';
     texto += centrar('MasQueWaffles') + '\n';
@@ -337,7 +337,6 @@
       const nombreProducto = prod.nombre;
       const precio = '$' + prod.precio.toFixed(2);
       
-      // Ajuste para letras más grandes: menos caracteres por línea
       if (nombreProducto.length + precio.length + 6 <= ANCHO) {
         const espacios = ANCHO - 6 - nombreProducto.length - precio.length;
         texto += '  [ ] ' + nombreProducto + ' '.repeat(Math.max(0, espacios)) + precio + '\n';
@@ -375,7 +374,7 @@
     texto += centrar(fecha) + '\n';
     texto += '='.repeat(ANCHO) + '\n';
     
-    // 🔹 ESPACIO INFERIOR (5mm = ~3 líneas en blanco)
+    // 🔹 ESPACIO INFERIOR: 3 líneas en blanco (~0.5 cm)
     texto += '\n\n\n';
 
     return texto;
@@ -509,7 +508,7 @@
   }
 
   // ================================================================
-  // 🖨️ METODO 3: Android (Web Bluetooth) - CON ESPACIO Y LETRAS GRANDES
+  // 🖨️ METODO 3: Android (Web Bluetooth) - ESPACIOS AJUSTADOS
   // ================================================================
   async function imprimirAndroid(ped, productosOrdenados) {
     const texto = generarTextoComanda(ped, productosOrdenados);
@@ -549,7 +548,7 @@
       
       console.log('📤 Texto completo enviado a la impresora');
 
-      // Esperar 2.5 segundos antes de cortar (más tiempo para texto más grande)
+      // Esperar 2.5 segundos antes de cortar
       setTimeout(async () => {
         try {
           const corte = new Uint8Array([0x1B, 0x69]);
