@@ -68,6 +68,8 @@
     .btn-excel { background: #1e7e34; }
     .btn-cerrar { background: #333; }
     .btn-enviar { background: #0057a3; }
+    .btn-imprimir-comanda { background: #2196f3; color: white; border: none; padding: 12px 18px; border-radius: 30px; font-weight: bold; font-size: 1rem; cursor: pointer; flex: 1 0 auto; box-shadow: 0 2px 6px rgba(0,0,0,0.2); transition: 0.1s; text-align: center; }
+    .btn-imprimir-comanda:active { transform: scale(0.96); }
     .btn-cancelar-pedido { background: #f44336; color: white; border: none; border-radius: 30px; padding: 6px 14px; font-weight: bold; font-size: 0.9rem; cursor: pointer; flex: 1 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     .btn-cancelar-pedido:active { transform: scale(0.96); }
     .pedido-en-curso { border-left: 4px solid #da291c; padding: 10px 12px; background: #fafafa; border-radius: 12px; margin-bottom: 10px; }
@@ -121,12 +123,67 @@
     .resumen-pedido { border-bottom: 1px solid #ddd; padding: 8px 0; }
     .resumen-pedido .pedido-header { font-weight: bold; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
     .resumen-pedido .productos-lista { font-size: 0.85rem; padding-left: 12px; }
-    @media (max-width: 768px) {
-      .col-izquierda, .col-derecha { flex: 1 0 100%; }
-      .grid-categorias { grid-template-columns: repeat(2, 1fr); }
-      .header h1 { font-size: 1.4rem; }
+    /* Modal de impresión */
+    .modal-impresion-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      padding: 20px;
+      backdrop-filter: blur(5px);
     }
-    /* Estilos para el asistente de crepa */
+    .modal-impresion-overlay.visible { display: flex; }
+    .modal-impresion {
+      background: #1e1e1e;
+      border-radius: 30px;
+      max-width: 450px;
+      width: 100%;
+      padding: 30px 24px;
+      max-height: 95vh;
+      overflow-y: auto;
+      border: 1px solid #333;
+    }
+    .modal-impresion h2 { color: #fff; margin-bottom: 16px; text-align: center; }
+    .modal-impresion .opcion {
+      display: block;
+      padding: 16px 20px;
+      background: #2a2a2a;
+      border-radius: 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      text-align: center;
+      font-weight: 600;
+      border: 2px solid transparent;
+      color: #fff;
+      transition: all 0.2s;
+      width: 100%;
+      font-size: 1rem;
+    }
+    .modal-impresion .opcion:active { transform: scale(0.96); background: #333; }
+    .modal-impresion .opcion .icono { font-size: 1.8rem; display: block; margin-bottom: 4px; }
+    .modal-impresion .opcion .descripcion { font-size: 0.8rem; color: #888; font-weight: 300; }
+    .modal-impresion .btn-cerrar {
+      background: #333;
+      color: #fff;
+      border: none;
+      border-radius: 30px;
+      padding: 12px;
+      width: 100%;
+      margin-top: 8px;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .modal-impresion .btn-cerrar:active { transform: scale(0.96); }
+    .modal-impresion .opcion.pc { border-color: #2196f3; }
+    .modal-impresion .opcion.ios { border-color: #0084FF; }
+    .modal-impresion .opcion.android { border-color: #4caf50; }
     .crepa-resumen {
       background: #f8f9fa;
       border-radius: 12px;
@@ -147,6 +204,11 @@
       font-weight: bold;
       color: #333;
     }
+    @media (max-width: 768px) {
+      .col-izquierda, .col-derecha { flex: 1 0 100%; }
+      .grid-categorias { grid-template-columns: repeat(2, 1fr); }
+      .header h1 { font-size: 1.4rem; }
+    }
   </style>
 </head>
 <body>
@@ -164,6 +226,7 @@
       <div style="margin: 10px 0;"><label>Nota del pedido:</label><input type="text" id="notaPedido" placeholder="Ej: Sin cebolla, entrega a las 8..." style="width:100%; padding:8px; border-radius:12px; border:1px solid #ccc;"></div>
       <div class="acciones">
         <button class="btn btn-enviar" id="btnEnviarCocina">📤 Enviar a cocina</button>
+        <button class="btn btn-imprimir-comanda" id="btnImprimirComandaCaja">🖨️ Imprimir comanda</button>
         <button class="btn btn-secundario" id="btnImprimirTicket">🧾 Imprimir ticket</button>
         <button class="btn btn-excel" id="btnGenerarExcel">📊 Generar Excel</button>
         <button class="btn btn-cerrar" id="btnCerrarTurno">🔒 Cerrar turno</button>
@@ -181,6 +244,29 @@
 </div>
 
 <div class="modal-overlay" id="modalSubproductos" style="display:none;"><div class="modal" id="modalContenido"></div></div>
+
+<!-- ===== MODAL DE IMPRESIÓN ===== -->
+<div class="modal-impresion-overlay" id="modalImpresionCaja">
+  <div class="modal-impresion">
+    <h2>🖨️ Selecciona método</h2>
+    <button class="opcion pc" id="opcionPCCaja">
+      <span class="icono">💻</span>
+      PC (USB / Escritorio)
+      <span class="descripcion">Imprime desde la ventana del navegador</span>
+    </button>
+    <button class="opcion ios" id="opcionIOSCaja">
+      <span class="icono">📱</span>
+      iOS (Thermer)
+      <span class="descripcion">Usa la app Thermer en iPhone/iPad</span>
+    </button>
+    <button class="opcion android" id="opcionAndroidCaja">
+      <span class="icono">📱</span>
+      Android (Web Bluetooth)
+      <span class="descripcion">Conecta directamente por Bluetooth</span>
+    </button>
+    <button class="btn-cerrar" id="btnCerrarModalCaja">Cancelar</button>
+  </div>
+</div>
 
 <script type="module">
   // ================================================================
@@ -349,6 +435,7 @@
   const notaPedidoInput = document.getElementById('notaPedido');
   const btnEnviar = document.getElementById('btnEnviarCocina');
   const btnImprimir = document.getElementById('btnImprimirTicket');
+  const btnImprimirComandaCaja = document.getElementById('btnImprimirComandaCaja');
   const btnExcel = document.getElementById('btnGenerarExcel');
   const btnCerrar = document.getElementById('btnCerrarTurno');
   const pedidosEnCursoDiv = document.getElementById('pedidosEnCurso');
@@ -358,6 +445,15 @@
   const detallePedidosTurnoDiv = document.getElementById('detallePedidosTurno');
   const modalSubproductos = document.getElementById('modalSubproductos');
   const modalContenido = document.getElementById('modalContenido');
+  
+  // Modal de impresión
+  const modalImpresionCaja = document.getElementById('modalImpresionCaja');
+  const btnCerrarModalCaja = document.getElementById('btnCerrarModalCaja');
+  const opcionPCCaja = document.getElementById('opcionPCCaja');
+  const opcionIOSCaja = document.getElementById('opcionIOSCaja');
+  const opcionAndroidCaja = document.getElementById('opcionAndroidCaja');
+  let pedidoParaImprimir = null;
+  let productosParaImprimir = null;
 
   // ================================================================
   // FUNCIONES DE FIRESTORE
@@ -441,7 +537,7 @@
   }
 
   // ================================================================
-  // RENDERIZAR CATEGORÍAS CON IMÁGENES
+  // RENDERIZAR CATEGORÍAS
   // ================================================================
   function renderCategorias() {
     categoriasGrid.innerHTML = '';
@@ -458,7 +554,7 @@
   }
 
   // ================================================================
-  // MODAL DE PRODUCTOS
+  // MODAL DE PRODUCTOS (igual que antes)
   // ================================================================
   function abrirModalCategoria(cat) {
     modalContenido.innerHTML = '';
@@ -515,7 +611,6 @@
     
     modalSubproductos.style.display = 'flex';
 
-    // Tecla ESC para cerrar
     const cerrarConEsc = function(e) {
       if (e.key === 'Escape') {
         modalSubproductos.style.display = 'none';
@@ -526,15 +621,13 @@
   }
 
   // ================================================================
-  // ASISTENTE DE CREPA (CON MÚLTIPLES SELECCIONES)
+  // ASISTENTE DE CREPA (igual que antes)
   // ================================================================
   function abrirAsistenteCrepa() {
-    // Opciones
     const sabores = ['Nutella', 'Merm.Fresa', 'Merm.Zarzamora', 'Lechera', 'Cajeta', 'Philadelphia'];
     const frutas = ['Fresas', 'Plátano', 'Durazno', 'Sin fruta'];
     const toppings = ['Nuez', 'Chispas Chocolate', 'Almendras', 'Sin topping'];
 
-    // Estado de selecciones (arrays)
     let saboresSeleccionados = [];
     let frutasSeleccionadas = [];
     let toppingsSeleccionados = [];
@@ -550,7 +643,6 @@
     closeBtn.addEventListener('click', () => { modalSubproductos.style.display = 'none'; });
     modalContenido.appendChild(closeBtn);
 
-    // Contenedor de resumen
     const resumenDiv = document.createElement('div');
     resumenDiv.className = 'crepa-resumen';
     resumenDiv.id = 'resumenCrepa';
@@ -567,7 +659,6 @@
       document.getElementById('resumenToppings').textContent = toppingsSeleccionados.length > 0 ? toppingsSeleccionados.join(', ') : '(ninguno)';
     }
 
-    // Función para crear sección de selección múltiple
     function crearSeccion(titulo, opciones, estadoArray, idContenedor, actualizar) {
       const container = document.createElement('div');
       container.style.marginBottom = '12px';
@@ -586,11 +677,9 @@
             estadoArray.splice(idx, 1);
             btn.classList.remove('seleccionado');
           }
-          // Si se selecciona "Sin fruta", quitar otras frutas
           if (titulo.includes('Fruta') && op === 'Sin fruta') {
             if (estadoArray.includes('Sin fruta') && estadoArray.length > 1) {
               estadoArray = ['Sin fruta'];
-              // Actualizar botones
               const btns = contenedorOpciones.querySelectorAll('button');
               btns.forEach(b => {
                 if (b.textContent === 'Sin fruta') {
@@ -599,7 +688,6 @@
                   b.classList.remove('seleccionado');
                 }
               });
-              // Actualizar estado de frutas
               frutasSeleccionadas = ['Sin fruta'];
             }
           }
@@ -610,12 +698,10 @@
       return container;
     }
 
-    // Crear secciones
     modalContenido.appendChild(crearSeccion('🍫 Sabores (elige varios)', sabores, saboresSeleccionados, 'saboresContainer', actualizarResumen));
     modalContenido.appendChild(crearSeccion('🍓 Frutas (elige varias)', frutas, frutasSeleccionadas, 'frutasContainer', actualizarResumen));
     modalContenido.appendChild(crearSeccion('🥜 Toppings (elige varios)', toppings, toppingsSeleccionados, 'toppingsContainer', actualizarResumen));
 
-    // Botón "Agregar crepa"
     const btnAgregar = document.createElement('button');
     btnAgregar.className = 'btn-principal';
     btnAgregar.textContent = '✅ Agregar crepa';
@@ -643,7 +729,6 @@
     });
     modalContenido.appendChild(btnAgregar);
 
-    // Botón cancelar
     const cerrar = document.createElement('button');
     cerrar.className = 'cerrar-modal';
     cerrar.textContent = 'Cancelar';
@@ -698,7 +783,380 @@
   }
 
   // ================================================================
-  // ENVIAR A COCINA
+  // 📋 FUNCION PARA GENERAR TEXTO DE LA COMANDA
+  // ================================================================
+  function generarTextoComanda(ped, productosOrdenados) {
+    const ahora = new Date();
+    const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    const ANCHO = 40;
+    
+    function centrar(t) {
+      const espacios = Math.max(0, Math.floor((ANCHO - t.length) / 2));
+      return ' '.repeat(espacios) + t;
+    }
+
+    function linea(t) {
+      if (t.length > ANCHO) return t.substring(0, ANCHO);
+      return t.padEnd(ANCHO, ' ');
+    }
+
+    function dividirTexto(texto, maxLen) {
+      const palabras = texto.split(' ');
+      const lineas = [];
+      let lineaActual = '';
+      for (let palabra of palabras) {
+        if ((lineaActual + ' ' + palabra).length <= maxLen) {
+          lineaActual += (lineaActual ? ' ' : '') + palabra;
+        } else {
+          if (lineaActual) lineas.push(lineaActual);
+          lineaActual = palabra;
+        }
+      }
+      if (lineaActual) lineas.push(lineaActual);
+      return lineas;
+    }
+
+    let texto = '';
+    texto += '\n';
+    texto += '='.repeat(ANCHO) + '\n';
+    texto += centrar('MasQueWaffles') + '\n';
+    texto += centrar('Comanda') + '\n';
+    texto += '='.repeat(ANCHO) + '\n';
+    texto += linea('Pedido #' + ped.numeroPedido + '   ' + hora) + '\n';
+    texto += '-'.repeat(ANCHO) + '\n';
+    texto += ' PRODUCTOS\n';
+    
+    productosOrdenados.forEach((prod) => {
+      const nombreProducto = prod.nombre;
+      const precio = '$' + prod.precio.toFixed(2);
+      
+      if (nombreProducto.length + precio.length + 6 <= ANCHO) {
+        const espacios = ANCHO - 6 - nombreProducto.length - precio.length;
+        texto += '  [ ] ' + nombreProducto + ' '.repeat(Math.max(0, espacios)) + precio + '\n';
+      } else {
+        const lineasNombre = dividirTexto(nombreProducto, ANCHO - 6);
+        lineasNombre.forEach((linea, idx) => {
+          if (idx === 0) {
+            texto += '  [ ] ' + linea + '\n';
+          } else {
+            texto += '       ' + linea + '\n';
+          }
+        });
+        const esp = Math.max(0, ANCHO - 6 - precio.length);
+        texto += '       ' + ' '.repeat(esp) + precio + '\n';
+      }
+      
+      if (prod.nota) {
+        const lineasNota = dividirTexto('   Nota: ' + prod.nota, ANCHO - 4);
+        lineasNota.forEach(linea => {
+          texto += '     ' + linea + '\n';
+        });
+      }
+    });
+
+    if (ped.notaPedido) {
+      const lineasNota = dividirTexto('Nota: ' + ped.notaPedido, ANCHO - 2);
+      texto += '\n';
+      lineasNota.forEach(linea => {
+        texto += '  ' + linea + '\n';
+      });
+    }
+
+    texto += '-'.repeat(ANCHO) + '\n';
+    texto += linea('Total: $' + ped.total.toFixed(2)) + '\n';
+    texto += centrar(fecha) + '\n';
+    texto += '='.repeat(ANCHO) + '\n';
+    texto += '\n\n\n';
+
+    return texto;
+  }
+
+  // ================================================================
+  // 🖨️ FUNCIONES DE IMPRESIÓN (PC, iOS, Android)
+  // ================================================================
+  
+  // Variables para Bluetooth
+  let dispositivoBT = null;
+  let caracteristicaBT = null;
+  let servidorBT = null;
+
+  async function conectarBluetooth() {
+    try {
+      if (dispositivoBT) {
+        try {
+          if (servidorBT) await servidorBT.disconnect();
+        } catch (e) {}
+        dispositivoBT = null;
+        caracteristicaBT = null;
+        servidorBT = null;
+        return 'desconectado';
+      }
+
+      dispositivoBT = await navigator.bluetooth.requestDevice({
+        filters: [
+          { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
+          { namePrefix: 'Printer' },
+          { namePrefix: 'POS' },
+          { namePrefix: 'BT' },
+          { namePrefix: 'GLPrinter' }
+        ],
+        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+      });
+
+      if (!dispositivoBT) return 'cancelado';
+
+      servidorBT = await dispositivoBT.gatt.connect();
+      const service = await servidorBT.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+      caracteristicaBT = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+
+      console.log('✅ Conectado a:', dispositivoBT.name);
+      return 'conectado';
+
+    } catch (error) {
+      console.error('Error de Bluetooth:', error);
+      dispositivoBT = null;
+      caracteristicaBT = null;
+      servidorBT = null;
+      throw error;
+    }
+  }
+
+  function imprimirPC(ped, productosOrdenados) {
+    const texto = generarTextoComanda(ped, productosOrdenados);
+    const ventana = window.open('', '_blank', 'width=400,height=500');
+    ventana.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Comanda #${ped.numeroPedido}</title>
+        <style>
+          body { 
+            font-family: 'Courier New', monospace; 
+            background: white; 
+            color: black; 
+            padding: 20px; 
+            margin: 0;
+            white-space: pre-wrap;
+            font-size: 11pt;
+            max-width: 80mm;
+          }
+          @media print { body { padding: 0; margin: 0; } .no-print { display: none; } }
+          .no-print { text-align: center; padding: 10px; border-top: 1px solid #ccc; }
+          .no-print button { padding: 8px 20px; border: none; border-radius: 30px; font-size: 0.9rem; cursor: pointer; margin: 0 4px; }
+          .btn-print { background: #2196f3; color: white; }
+          .btn-close { background: #ccc; color: #333; }
+          pre { margin: 0; }
+        </style>
+      </head>
+      <body>
+        <pre>${texto}</pre>
+        <div class="no-print">
+          <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
+          <button class="btn-close" onclick="window.close()">Cerrar</button>
+        </div>
+        <script>setTimeout(() => window.print(), 500);<\/script>
+      </body>
+      </html>
+    `);
+    ventana.document.close();
+  }
+
+  function imprimirIOS(ped, productosOrdenados) {
+    const ahora = new Date();
+    const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    let printEntries = [];
+    printEntries.push({ type: 0, content: 'MasQueWaffles', bold: 1, align: 1, format: 1 });
+    printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
+    printEntries.push({ type: 0, content: 'Pedido #' + ped.numeroPedido + '  ' + hora, bold: 1, align: 0, format: 0 });
+    printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
+
+    productosOrdenados.forEach((prod) => {
+      printEntries.push({ type: 0, content: '  [ ] ' + prod.nombre + ' - $' + prod.precio.toFixed(2), bold: 0, align: 0, format: 0 });
+      if (prod.nota) {
+        printEntries.push({ type: 0, content: '   Nota: ' + prod.nota, bold: 0, align: 0, format: 0 });
+      }
+    });
+
+    if (ped.notaPedido) {
+      printEntries.push({ type: 0, content: 'Nota: ' + ped.notaPedido, bold: 0, align: 0, format: 0 });
+    }
+
+    printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
+    printEntries.push({ type: 0, content: 'Total: $' + ped.total.toFixed(2), bold: 1, align: 1, format: 1 });
+    printEntries.push({ type: 0, content: fecha, bold: 0, align: 1, format: 0 });
+
+    const jsonData = JSON.stringify(printEntries);
+    const encodedData = encodeURIComponent(jsonData);
+    const thermerUrl = 'thermer://print?data=' + encodedData;
+
+    window.location.href = thermerUrl;
+
+    setTimeout(() => {
+      alert('⚠️ Si la app no se abrió:\n\n1. Asegúrate de tener "Thermer" instalada\n2. Abre la app manualmente\n3. Busca la opción de importar JSON');
+    }, 3000);
+  }
+
+  async function imprimirAndroid(ped, productosOrdenados) {
+    const texto = generarTextoComanda(ped, productosOrdenados);
+
+    try {
+      if (!navigator.bluetooth) {
+        alert('❌ Web Bluetooth no está disponible.\n\nUsa Chrome en Android.');
+        return;
+      }
+
+      if (!dispositivoBT) {
+        const resultado = await conectarBluetooth();
+        if (resultado === 'cancelado') return;
+        if (resultado !== 'conectado') {
+          alert('❌ No se pudo conectar a la impresora.');
+          return;
+        }
+        alert('✅ Conectado a: ' + (dispositivoBT.name || 'Impresora'));
+      }
+
+      if (!caracteristicaBT) {
+        alert('❌ Error: No se pudo obtener la característica de impresión.');
+        return;
+      }
+
+      const encoder = new TextEncoder();
+      const textoCompleto = texto + '\n\n\n';
+      
+      const chunkSize = 200;
+      for (let i = 0; i < textoCompleto.length; i += chunkSize) {
+        const chunk = textoCompleto.substring(i, i + chunkSize);
+        const data = encoder.encode(chunk);
+        await caracteristicaBT.writeValue(data);
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      
+      console.log('📤 Texto completo enviado a la impresora');
+
+      setTimeout(async () => {
+        try {
+          const corte = new Uint8Array([0x1B, 0x69]);
+          await caracteristicaBT.writeValue(corte);
+          console.log('✂️ Comando de corte enviado');
+          alert('✅ ¡Comanda impresa correctamente!');
+        } catch (e) {
+          console.log('No se pudo enviar corte:', e);
+          alert('✅ Comanda enviada (corte no disponible)');
+        }
+      }, 2500);
+
+    } catch (error) {
+      console.error('Error al imprimir:', error);
+      alert('❌ Error al imprimir.\n\n' + error.message);
+      dispositivoBT = null;
+      caracteristicaBT = null;
+      servidorBT = null;
+    }
+  }
+
+  // ================================================================
+  // 🟢 FUNCIONES PARA ABRIR MODAL DE IMPRESIÓN
+  // ================================================================
+  function abrirModalImpresion(ped, productosOrdenados) {
+    pedidoParaImprimir = ped;
+    productosParaImprimir = productosOrdenados;
+    modalImpresionCaja.classList.add('visible');
+  }
+
+  // ================================================================
+  // 🟢 EVENTOS DEL MODAL DE IMPRESIÓN
+  // ================================================================
+  btnCerrarModalCaja.addEventListener('click', () => {
+    modalImpresionCaja.classList.remove('visible');
+  });
+
+  modalImpresionCaja.addEventListener('click', (e) => {
+    if (e.target === modalImpresionCaja) {
+      modalImpresionCaja.classList.remove('visible');
+    }
+  });
+
+  opcionPCCaja.addEventListener('click', () => {
+    modalImpresionCaja.classList.remove('visible');
+    if (pedidoParaImprimir && productosParaImprimir) {
+      imprimirPC(pedidoParaImprimir, productosParaImprimir);
+    }
+  });
+
+  opcionIOSCaja.addEventListener('click', () => {
+    modalImpresionCaja.classList.remove('visible');
+    if (pedidoParaImprimir && productosParaImprimir) {
+      imprimirIOS(pedidoParaImprimir, productosParaImprimir);
+    }
+  });
+
+  opcionAndroidCaja.addEventListener('click', async () => {
+    modalImpresionCaja.classList.remove('visible');
+    if (pedidoParaImprimir && productosParaImprimir) {
+      await imprimirAndroid(pedidoParaImprimir, productosParaImprimir);
+    }
+  });
+
+  // ================================================================
+  // 🟢 ORDENAR PRODUCTOS (para impresión)
+  // ================================================================
+  function ordenarProductos(productos) {
+    const ordenGrupos = {
+      'CREPAS': 1, 'ALITAS': 2, 'BONELESS': 3, 'HAMBURGUESAS': 4,
+      'HOT DOGS': 5, 'PAPAS Y SALCHICHA': 6, 'NUGGETS, PALITOS, AROS': 7,
+      'SOPAS': 8, 'FRAPPES': 9, 'MALTEADAS': 10, 'JELLY COFFEE': 11, 'SODA ITALIANA': 12
+    };
+
+    function getGrupo(nombre) {
+      const n = nombre.toUpperCase();
+      if (n.includes('CREPA')) return 'CREPAS';
+      if (n.includes('ALITA')) return 'ALITAS';
+      if (n.includes('BONELESS')) return 'BONELESS';
+      if (n.includes('HAMBURGUESA')) return 'HAMBURGUESAS';
+      if (n.includes('HOT DOG')) return 'HOT DOGS';
+      if (n.includes('PAPAS') || n.includes('SALCHIPAPAS') || n.includes('SALCHIPULPOS')) return 'PAPAS Y SALCHICHA';
+      if (n.includes('NUGGETS') || n.includes('PALITOS') || n.includes('AROS') || n.includes('SINCRONIZADA')) return 'NUGGETS, PALITOS, AROS';
+      if (n.includes('SOPA') || n.includes('BULDAK') || n.includes('RAMEN')) return 'SOPAS';
+      if (n.includes('FRAPPE')) return 'FRAPPES';
+      if (n.includes('MALTEADA')) return 'MALTEADAS';
+      if (n.includes('JELLY')) return 'JELLY COFFEE';
+      if (n.includes('SODA')) return 'SODA ITALIANA';
+      return 'OTROS';
+    }
+
+    return productos.sort((a, b) => {
+      const grupoA = getGrupo(a.nombre);
+      const grupoB = getGrupo(b.nombre);
+      const ordenA = ordenGrupos[grupoA] || 999;
+      const ordenB = ordenGrupos[grupoB] || 999;
+      if (ordenA !== ordenB) return ordenA - ordenB;
+      return a.nombre.localeCompare(b.nombre);
+    });
+  }
+
+  // ================================================================
+  // 🟢 BOTÓN: IMPRIMIR COMANDAS MANUAL DESDE CAJA
+  // ================================================================
+  btnImprimirComandaCaja.addEventListener('click', () => {
+    if (pedidoActual.length === 0) {
+      alert('No hay productos en el pedido actual para imprimir.');
+      return;
+    }
+    const pedidoTemp = {
+      numeroPedido: '?',
+      total: pedidoActual.reduce((sum, p) => sum + p.precio, 0),
+      notaPedido: notaPedidoInput.value.trim()
+    };
+    const productosOrdenados = ordenarProductos([...pedidoActual]);
+    abrirModalImpresion(pedidoTemp, productosOrdenados);
+  });
+
+  // ================================================================
+  // 🔥 ENVIAR A COCINA (CON IMPRESIÓN AUTOMÁTICA)
   // ================================================================
   btnEnviar.addEventListener('click', async () => {
     if (pedidoActual.length === 0) {
@@ -732,6 +1190,18 @@
 
     try {
       await addDoc(collection(db, 'pedidos'), pedidoData);
+      
+      // 🔥 IMPRESIÓN AUTOMÁTICA AL ENVIAR
+      const pedidoTemp = {
+        numeroPedido: numero,
+        total: total,
+        notaPedido: notaGeneral
+      };
+      const productosOrdenados = ordenarProductos([...pedidoActual]);
+      
+      // Mostrar modal para seleccionar método de impresión
+      abrirModalImpresion(pedidoTemp, productosOrdenados);
+      
       pedidoActual = [];
       notaPedidoInput.value = '';
       renderPedidoActual();
@@ -742,7 +1212,7 @@
   });
 
   // ================================================================
-  // IMPRIMIR TICKET
+  // IMPRIMIR TICKET (CLIENTE)
   // ================================================================
   btnImprimir.addEventListener('click', () => {
     if (pedidoActual.length === 0) {
