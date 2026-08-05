@@ -17,7 +17,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f5f5f5; color: #1c1c1e; padding: 12px; max-width: 1200px; margin: 0 auto; }
-    .header { background: #da291c; color: white; padding: 16px 20px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .header { background: #da291c; color: white; padding: 16px 20px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); flex-wrap: wrap; gap: 8px; }
     .header h1 { font-size: 1.8rem; letter-spacing: 1px; }
     .header h1 span { font-weight: 300; }
     .header .turno { background: #ffc72c; color: #1c1c1e; padding: 6px 14px; border-radius: 30px; font-weight: bold; font-size: 1rem; }
@@ -55,7 +55,7 @@
       margin-top: 4px;
     }
     .seccion { background: white; border-radius: 20px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .seccion h2 { font-size: 1.2rem; margin-bottom: 12px; display: flex; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 6px; }
+    .seccion h2 { font-size: 1.2rem; margin-bottom: 12px; display: flex; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 6px; flex-wrap: wrap; gap: 4px; }
     .item-pedido { display: flex; justify-content: space-between; align-items: center; background: #f9f9f9; padding: 8px 12px; border-radius: 12px; margin-bottom: 6px; font-size: 0.95rem; flex-wrap: wrap; }
     .item-pedido .info { flex: 1; }
     .item-pedido .nota-input { border: 1px solid #ccc; border-radius: 8px; padding: 2px 8px; font-size: 0.8rem; width: 100%; margin-top: 4px; }
@@ -74,7 +74,7 @@
     .btn-cancelar-pedido:active { transform: scale(0.96); }
     .pedido-en-curso { border-left: 4px solid #da291c; padding: 10px 12px; background: #fafafa; border-radius: 12px; margin-bottom: 10px; }
     .pedido-en-curso.listo { border-left-color: #2e7d32; background: #e8f5e9; }
-    .pedido-en-curso .cabecera { display: flex; justify-content: space-between; font-weight: bold; font-size: 1rem; flex-wrap: wrap; }
+    .pedido-en-curso .cabecera { display: flex; justify-content: space-between; font-weight: bold; font-size: 1rem; flex-wrap: wrap; gap: 4px; }
     .pedido-en-curso .estado { padding: 2px 12px; border-radius: 20px; background: #ffc72c; font-size: 0.8rem; }
     .pedido-en-curso .estado.listo { background: #4caf50; color: white; }
     .pedido-en-curso .productos { font-size: 0.85rem; margin: 6px 0; }
@@ -83,6 +83,20 @@
     .btn-pagado { background: #ff9800; }
     .btn-entregado { background: #4caf50; }
     .btn-entregado:disabled { opacity: 0.5; }
+    .btn-imprimir-comanda-pedido { 
+      background: #2196f3; 
+      color: white; 
+      border: none; 
+      border-radius: 30px; 
+      padding: 4px 12px; 
+      font-weight: bold; 
+      font-size: 0.8rem; 
+      cursor: pointer; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      flex: 1 0 auto;
+      min-width: 80px;
+    }
+    .btn-imprimir-comanda-pedido:active { transform: scale(0.96); }
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
     .modal {
       background: white;
@@ -250,15 +264,18 @@
   <div class="modal-impresion">
     <h2>🖨️ Selecciona método</h2>
     <button class="opcion pc" id="opcionPCCaja">
-      <span class="icono">💻</span> PC (USB / Escritorio)
+      <span class="icono">💻</span>
+      PC (USB / Escritorio)
       <span class="descripcion">Imprime desde la ventana del navegador</span>
     </button>
     <button class="opcion ios" id="opcionIOSCaja">
-      <span class="icono">📱</span> iOS (Thermer)
+      <span class="icono">📱</span>
+      iOS (Thermer)
       <span class="descripcion">Usa la app Thermer en iPhone/iPad</span>
     </button>
     <button class="opcion android" id="opcionAndroidCaja">
-      <span class="icono">📱</span> Android (Web Bluetooth)
+      <span class="icono">📱</span>
+      Android (Web Bluetooth)
       <span class="descripcion">Conecta directamente por Bluetooth</span>
     </button>
     <button class="btn-cerrar" id="btnCerrarModalCaja">Cancelar</button>
@@ -452,6 +469,11 @@
   let pedidoParaImprimir = null;
   let productosParaImprimir = null;
 
+  // Variables para Bluetooth
+  let dispositivoBT = null;
+  let caracteristicaBT = null;
+  let servidorBT = null;
+
   // ================================================================
   // FUNCIONES DE FIRESTORE
   // ================================================================
@@ -618,7 +640,7 @@
   }
 
   // ================================================================
-  // ASISTENTE DE CREPA (CON MÚLTIPLES SELECCIONES)
+  // ASISTENTE DE CREPA
   // ================================================================
   function abrirAsistenteCrepa() {
     const sabores = ['Nutella', 'Merm.Fresa', 'Merm.Zarzamora', 'Lechera', 'Cajeta', 'Philadelphia'];
@@ -780,15 +802,15 @@
   }
 
   // ================================================================
-  // 📋 FUNCIÓN PARA GENERAR TEXTO DE LA COMANDA (75mm / 44 caracteres)
+  // 📋 FUNCION PARA GENERAR TEXTO DE LA COMANDA (MÁRGENES MEJORADOS)
   // ================================================================
-  function generarTextoComanda(ped, productosOrdenados, copiaNumero) {
+  function generarTextoComanda(ped, productosOrdenados) {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    // ✅ ANCHO PARA 75mm: 44 caracteres (2.5mm de margen a cada lado)
-    const ANCHO = 44;
+    // ANCHO para 80mm: 40 caracteres por línea
+    const ANCHO = 40;
     
     function centrar(t) {
       const espacios = Math.max(0, Math.floor((ANCHO - t.length) / 2));
@@ -818,8 +840,8 @@
 
     let texto = '';
     
-    // 🔹 ESPACIO SUPERIOR (0.2 cm)
-    texto += '\n\n';
+    // 🔹 MARGEN SUPERIOR: 1 línea en blanco (~0.1cm)
+    texto += '\n';
     
     texto += '='.repeat(ANCHO) + '\n';
     texto += centrar('MasQueWaffles') + '\n';
@@ -870,21 +892,16 @@
     texto += centrar(fecha) + '\n';
     texto += '='.repeat(ANCHO) + '\n';
     
-    // 🔹 ESPACIO INFERIOR (0.5 cm)
-    texto += '\n\n\n';
+    // 🔹 MARGEN INFERIOR: 2 líneas en blanco (~0.2cm) para el corte
+    texto += '\n\n';
 
     return texto;
   }
 
   // ================================================================
-  // 🖨️ FUNCIONES DE IMPRESIÓN (PC, iOS, Android)
+  // 🖨️ FUNCIONES DE IMPRESIÓN
   // ================================================================
   
-  // Variables para Bluetooth
-  let dispositivoBT = null;
-  let caracteristicaBT = null;
-  let servidorBT = null;
-
   async function conectarBluetooth() {
     try {
       if (dispositivoBT) {
@@ -927,10 +944,7 @@
   }
 
   function imprimirPC(ped, productosOrdenados) {
-    const texto1 = generarTextoComanda(ped, productosOrdenados, 1);
-    const texto2 = generarTextoComanda(ped, productosOrdenados, 2);
-    const contenido = texto1 + '\n\n' + texto2;
-
+    const texto = generarTextoComanda(ped, productosOrdenados);
     const ventana = window.open('', '_blank', 'width=400,height=500');
     ventana.document.write(`
       <!DOCTYPE html>
@@ -942,34 +956,25 @@
             font-family: 'Courier New', monospace; 
             background: white; 
             color: black; 
-            padding: 0 2.5mm; 
+            padding: 0;
             margin: 0;
             white-space: pre-wrap;
             font-size: 11pt;
-            max-width: 75mm;
-            margin: 0 auto;
+            max-width: 80mm;
           }
-          @media print {
-            body { padding: 0 2.5mm; margin: 0; }
-            .no-print { display: none; }
-            .page-break { page-break-after: always; }
-          }
+          @media print { body { padding: 0; margin: 0; } .no-print { display: none; } }
           .no-print { text-align: center; padding: 10px; border-top: 1px solid #ccc; }
           .no-print button { padding: 8px 20px; border: none; border-radius: 30px; font-size: 0.9rem; cursor: pointer; margin: 0 4px; }
           .btn-print { background: #2196f3; color: white; }
           .btn-close { background: #ccc; color: #333; }
-          pre { margin: 0; }
-          .page-break { display: block; }
+          pre { margin: 0; padding: 0; }
         </style>
       </head>
       <body>
-        <pre>${texto1}</pre>
-        <div class="page-break"></div>
-        <pre>${texto2}</pre>
+        <pre>${texto}</pre>
         <div class="no-print">
-          <button class="btn-print" onclick="window.print()">🖨️ Imprimir (2 copias)</button>
+          <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
           <button class="btn-close" onclick="window.close()">Cerrar</button>
-          <div style="font-size:0.7rem;color:#999;margin-top:4px;">Se imprimirán 2 copias separadas por salto de página</div>
         </div>
         <script>setTimeout(() => window.print(), 500);<\/script>
       </body>
@@ -1003,6 +1008,9 @@
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: 'Total: $' + ped.total.toFixed(2), bold: 1, align: 1, format: 1 });
     printEntries.push({ type: 0, content: fecha, bold: 0, align: 1, format: 0 });
+    // Margen inferior
+    printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
+    printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
 
     const jsonData = JSON.stringify(printEntries);
     const encodedData = encodeURIComponent(jsonData);
@@ -1016,8 +1024,7 @@
   }
 
   async function imprimirAndroid(ped, productosOrdenados) {
-    const texto1 = generarTextoComanda(ped, productosOrdenados, 1);
-    const texto2 = generarTextoComanda(ped, productosOrdenados, 2);
+    const texto = generarTextoComanda(ped, productosOrdenados);
 
     try {
       if (!navigator.bluetooth) {
@@ -1041,29 +1048,29 @@
       }
 
       const encoder = new TextEncoder();
+      const textoCompleto = texto + '\n\n';
       
-      // --- Primera copia ---
-      const data1 = encoder.encode(texto1 + '\n\n\n');
-      await caracteristicaBT.writeValue(data1);
-      console.log('📤 Primera copia enviada');
+      const chunkSize = 200;
+      for (let i = 0; i < textoCompleto.length; i += chunkSize) {
+        const chunk = textoCompleto.substring(i, i + chunkSize);
+        const data = encoder.encode(chunk);
+        await caracteristicaBT.writeValue(data);
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // --- Comando de corte ---
-      const corte = new Uint8Array([0x1B, 0x69]);
-      await caracteristicaBT.writeValue(corte);
-      console.log('✂️ Corte enviado');
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // --- Segunda copia ---
-      const data2 = encoder.encode(texto2 + '\n\n\n');
-      await caracteristicaBT.writeValue(data2);
-      console.log('📤 Segunda copia enviada');
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      alert('✅ ¡Comanda impresa (2 copias) correctamente!');
+      console.log('📤 Texto completo enviado a la impresora');
+
+      setTimeout(async () => {
+        try {
+          const corte = new Uint8Array([0x1B, 0x69]);
+          await caracteristicaBT.writeValue(corte);
+          console.log('✂️ Comando de corte enviado');
+          alert('✅ ¡Comanda impresa correctamente!');
+        } catch (e) {
+          console.log('No se pudo enviar corte:', e);
+          alert('✅ Comanda enviada (corte no disponible)');
+        }
+      }, 2500);
 
     } catch (error) {
       console.error('Error al imprimir:', error);
@@ -1118,7 +1125,7 @@
   });
 
   // ================================================================
-  // 🟢 ORDENAR PRODUCTOS (para impresión)
+  // 🟢 ORDENAR PRODUCTOS
   // ================================================================
   function ordenarProductos(productos) {
     const ordenGrupos = {
@@ -1207,7 +1214,6 @@
     try {
       await addDoc(collection(db, 'pedidos'), pedidoData);
       
-      // 🔥 IMPRESIÓN AUTOMÁTICA AL ENVIAR
       const pedidoTemp = {
         numeroPedido: numero,
         total: total,
@@ -1215,7 +1221,6 @@
       };
       const productosOrdenados = ordenarProductos([...pedidoActual]);
       
-      // Mostrar modal para seleccionar método de impresión
       abrirModalImpresion(pedidoTemp, productosOrdenados);
       
       pedidoActual = [];
@@ -1330,6 +1335,9 @@
     });
   }
 
+  // ================================================================
+  // RENDER PEDIDOS EN CURSO CON BOTÓN DE IMPRESIÓN
+  // ================================================================
   function renderPedidosEnCurso() {
     if (pedidosCache.length === 0) {
       pedidosEnCursoDiv.innerHTML = '<p style="color:#888;">No hay pedidos en curso.</p>';
@@ -1369,6 +1377,21 @@
         notaDiv.textContent = '📝 Nota: ' + ped.notaPedido;
         div.appendChild(notaDiv);
       }
+
+      // 🟢 BOTÓN DE IMPRESIÓN DE COMANDA PARA CADA PEDIDO
+      const btnImprimirPedido = document.createElement('button');
+      btnImprimirPedido.className = 'btn-imprimir-comanda-pedido';
+      btnImprimirPedido.textContent = '🖨️ Imprimir comanda';
+      btnImprimirPedido.addEventListener('click', () => {
+        const productosOrdenados = ordenarProductos([...ped.productos]);
+        const pedidoTemp = {
+          numeroPedido: ped.numeroPedido,
+          total: ped.total,
+          notaPedido: ped.notaPedido || ''
+        };
+        abrirModalImpresion(pedidoTemp, productosOrdenados);
+      });
+      div.appendChild(btnImprimirPedido);
 
       const acciones = document.createElement('div');
       acciones.className = 'acciones-pedido';
