@@ -284,15 +284,15 @@
   }
 
   // ================================================================
-  // 📋 FUNCION PARA GENERAR TEXTO DE LA COMANDA (ESPACIOS AJUSTADOS)
+  // 📋 FUNCION PARA GENERAR TEXTO DE LA COMANDA (75mm / 44 caracteres)
   // ================================================================
-  function generarTextoComanda(ped, productosOrdenados) {
+  function generarTextoComanda(ped, productosOrdenados, copiaNumero) {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    // ✅ ANCHO PARA 80mm: 40 caracteres por línea (letras más grandes)
-    const ANCHO = 40;
+    // ✅ ANCHO PARA 75mm: 44 caracteres (2.5mm de margen a cada lado)
+    const ANCHO = 44;
     
     function centrar(t) {
       const espacios = Math.max(0, Math.floor((ANCHO - t.length) / 2));
@@ -322,7 +322,7 @@
 
     let texto = '';
     
-    // 🔹 ESPACIO SUPERIOR: 2 líneas en blanco (~0.2 cm)
+    // 🔹 ESPACIO SUPERIOR (0.2 cm)
     texto += '\n\n';
     
     texto += '='.repeat(ANCHO) + '\n';
@@ -374,7 +374,7 @@
     texto += centrar(fecha) + '\n';
     texto += '='.repeat(ANCHO) + '\n';
     
-    // 🔹 ESPACIO INFERIOR: 3 líneas en blanco (~0.5 cm)
+    // 🔹 ESPACIO INFERIOR (0.5 cm)
     texto += '\n\n\n';
 
     return texto;
@@ -425,10 +425,13 @@
   }
 
   // ================================================================
-  // 🖨️ METODO 1: PC
+  // 🖨️ METODO 1: PC (2 copias con salto de página)
   // ================================================================
   function imprimirPC(ped, productosOrdenados) {
-    const texto = generarTextoComanda(ped, productosOrdenados);
+    const texto1 = generarTextoComanda(ped, productosOrdenados, 1);
+    const texto2 = generarTextoComanda(ped, productosOrdenados, 2);
+    const contenido = texto1 + '\n\n' + texto2;
+
     const ventana = window.open('', '_blank', 'width=400,height=500');
     ventana.document.write(`
       <!DOCTYPE html>
@@ -440,25 +443,34 @@
             font-family: 'Courier New', monospace; 
             background: white; 
             color: black; 
-            padding: 20px; 
+            padding: 0 2.5mm; 
             margin: 0;
             white-space: pre-wrap;
             font-size: 11pt;
-            max-width: 80mm;
+            max-width: 75mm;
+            margin: 0 auto;
           }
-          @media print { body { padding: 0; margin: 0; } .no-print { display: none; } }
+          @media print {
+            body { padding: 0 2.5mm; margin: 0; }
+            .no-print { display: none; }
+            .page-break { page-break-after: always; }
+          }
           .no-print { text-align: center; padding: 10px; border-top: 1px solid #ccc; }
           .no-print button { padding: 8px 20px; border: none; border-radius: 30px; font-size: 0.9rem; cursor: pointer; margin: 0 4px; }
           .btn-print { background: #2196f3; color: white; }
           .btn-close { background: #ccc; color: #333; }
           pre { margin: 0; }
+          .page-break { display: block; }
         </style>
       </head>
       <body>
-        <pre>${texto}</pre>
+        <pre>${texto1}</pre>
+        <div class="page-break"></div>
+        <pre>${texto2}</pre>
         <div class="no-print">
-          <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
+          <button class="btn-print" onclick="window.print()">🖨️ Imprimir (2 copias)</button>
           <button class="btn-close" onclick="window.close()">Cerrar</button>
+          <div style="font-size:0.7rem;color:#999;margin-top:4px;">Se imprimirán 2 copias separadas por salto de página</div>
         </div>
         <script>setTimeout(() => window.print(), 500);<\/script>
       </body>
@@ -508,10 +520,11 @@
   }
 
   // ================================================================
-  // 🖨️ METODO 3: Android (Web Bluetooth) - ESPACIOS AJUSTADOS
+  // 🖨️ METODO 3: Android (Web Bluetooth) - 2 copias con corte
   // ================================================================
   async function imprimirAndroid(ped, productosOrdenados) {
-    const texto = generarTextoComanda(ped, productosOrdenados);
+    const texto1 = generarTextoComanda(ped, productosOrdenados, 1);
+    const texto2 = generarTextoComanda(ped, productosOrdenados, 2);
 
     try {
       if (!navigator.bluetooth) {
@@ -535,31 +548,29 @@
       }
 
       const encoder = new TextEncoder();
-      const textoCompleto = texto + '\n\n\n';
       
-      // Enviar en bloques para evitar errores
-      const chunkSize = 200;
-      for (let i = 0; i < textoCompleto.length; i += chunkSize) {
-        const chunk = textoCompleto.substring(i, i + chunkSize);
-        const data = encoder.encode(chunk);
-        await caracteristicaBT.writeValue(data);
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
+      // --- Primera copia ---
+      const data1 = encoder.encode(texto1 + '\n\n\n');
+      await caracteristicaBT.writeValue(data1);
+      console.log('📤 Primera copia enviada');
       
-      console.log('📤 Texto completo enviado a la impresora');
-
-      // Esperar 2.5 segundos antes de cortar
-      setTimeout(async () => {
-        try {
-          const corte = new Uint8Array([0x1B, 0x69]);
-          await caracteristicaBT.writeValue(corte);
-          console.log('✂️ Comando de corte enviado');
-          alert('✅ ¡Comanda impresa correctamente!');
-        } catch (e) {
-          console.log('No se pudo enviar corte:', e);
-          alert('✅ Comanda enviada (corte no disponible)');
-        }
-      }, 2500);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // --- Comando de corte ---
+      const corte = new Uint8Array([0x1B, 0x69]);
+      await caracteristicaBT.writeValue(corte);
+      console.log('✂️ Corte enviado');
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // --- Segunda copia ---
+      const data2 = encoder.encode(texto2 + '\n\n\n');
+      await caracteristicaBT.writeValue(data2);
+      console.log('📤 Segunda copia enviada');
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      alert('✅ ¡Comanda impresa (2 copias) correctamente!');
 
     } catch (error) {
       console.error('Error al imprimir:', error);
@@ -692,7 +703,7 @@
 
       const btnComanda = document.createElement('button');
       btnComanda.className = 'btn-imprimir-comanda';
-      btnComanda.textContent = '🖨️ Imprimir comanda';
+      btnComanda.textContent = '🖨️ Imprimir comanda (2 copias)';
       btnComanda.addEventListener('click', () => {
         abrirModalImpresion(ped, productosOrdenados);
       });
