@@ -179,6 +179,22 @@
   const db = getFirestore(app);
   const auth = getAuth(app);
 
+  function limpiarTexto(texto) {
+    const mapa = {
+      'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+      'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U',
+      'ñ': 'n', 'Ñ': 'N',
+      'ä': 'a', 'ë': 'e', 'ï': 'i', 'ö': 'o', 'ü': 'u',
+      'Ä': 'A', 'Ë': 'E', 'Ï': 'I', 'Ö': 'O', 'Ü': 'U'
+    };
+    let limpio = texto;
+    for (let [original, reemplazo] of Object.entries(mapa)) {
+      limpio = limpio.replace(new RegExp(original, 'g'), reemplazo);
+    }
+    limpio = limpio.replace(/[^a-zA-Z0-9\s\-+]/g, '');
+    return limpio.trim();
+  }
+
   const turnoNumSpan = document.getElementById('turnoNum');
   const pedidosContainer = document.getElementById('pedidosContainer');
   const btnImprimirComanda = document.getElementById('btnImprimirComanda');
@@ -270,12 +286,15 @@
     });
   }
 
+  // ================================================================
+  // 📋 GENERAR TEXTO COMANDA - ANCHO 46 (76mm útiles)
+  // ================================================================
   function generarTextoComanda(ped, productosOrdenados) {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    const ANCHO = 38;
+    const ANCHO = 46;
     
     function centrar(t) {
       const espacios = Math.max(0, Math.floor((ANCHO - t.length) / 2));
@@ -326,10 +345,9 @@
     texto += '-'.repeat(ANCHO) + '\n';
     texto += ' PRODUCTOS (' + productosOrdenados.length + ')\n';
     
-    productosOrdenados.forEach((prod) => {
+    productosOrdenados.forEach((prod, index) => {
       const nombreProducto = prod.nombre;
-      
-      const nombreLimpio = nombreProducto.replace(/[^a-zA-Z0-9\s\-+áéíóúÁÉÍÓÚñÑ]/g, '').trim();
+      const nombreLimpio = limpiarTexto(nombreProducto);
       
       const maxLenNombre = ANCHO - 6;
       const lineasNombre = dividirTexto(nombreLimpio, maxLenNombre);
@@ -343,21 +361,26 @@
       });
       
       if (prod.nota) {
-        const lineasNota = dividirTexto('   Nota: ' + prod.nota, ANCHO - 4);
+        const lineasNota = dividirTexto('     Nota: ' + prod.nota, ANCHO - 4);
         lineasNota.forEach(linea => {
           texto += '     ' + linea + '\n';
         });
       }
+      
+      if (index < productosOrdenados.length - 1) {
+        texto += ' \n';
+      }
     });
 
     if (ped.notaPedido) {
-      const lineasNota = dividirTexto('Nota: ' + ped.notaPedido, ANCHO - 2);
       texto += '\n';
+      const lineasNota = dividirTexto('Nota del pedido: ' + ped.notaPedido, ANCHO - 2);
       lineasNota.forEach(linea => {
         texto += '  ' + linea + '\n';
       });
     }
 
+    texto += '\n';
     texto += '-'.repeat(ANCHO) + '\n';
     texto += linea('Total: $' + ped.total.toFixed(2)) + '\n';
     texto += centrar(fecha) + '\n';
@@ -411,7 +434,7 @@
 
   function imprimirPC(ped, productosOrdenados) {
     const texto = generarTextoComanda(ped, productosOrdenados);
-    const ventana = window.open('', '_blank', 'width=400,height=500');
+    const ventana = window.open('', '_blank', 'width=480,height=600');
     ventana.document.write(`
       <!DOCTYPE html>
       <html>
@@ -461,18 +484,23 @@
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: 'PRODUCTOS (' + productosOrdenados.length + ')', bold: 0, align: 0, format: 0 });
 
-    productosOrdenados.forEach((prod) => {
-      const nombreLimpio = prod.nombre.replace(/[^a-zA-Z0-9\s\-+áéíóúÁÉÍÓÚñÑ]/g, '').trim();
+    productosOrdenados.forEach((prod, index) => {
+      const nombreLimpio = limpiarTexto(prod.nombre);
       printEntries.push({ type: 0, content: '  1X ' + nombreLimpio, bold: 0, align: 0, format: 0 });
       if (prod.nota) {
         printEntries.push({ type: 0, content: '     Nota: ' + prod.nota, bold: 0, align: 0, format: 0 });
       }
+      if (index < productosOrdenados.length - 1) {
+        printEntries.push({ type: 0, content: ' ', bold: 0, align: 0, format: 0 });
+      }
     });
 
     if (ped.notaPedido) {
+      printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
       printEntries.push({ type: 0, content: 'Nota: ' + ped.notaPedido, bold: 0, align: 0, format: 0 });
     }
 
+    printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: 'Total: $' + ped.total.toFixed(2), bold: 1, align: 1, format: 1 });
     printEntries.push({ type: 0, content: fecha, bold: 0, align: 1, format: 0 });

@@ -298,22 +298,38 @@
   const db = getFirestore(app);
   const auth = getAuth(app);
 
+  function limpiarTexto(texto) {
+    const mapa = {
+      'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+      'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U',
+      'ñ': 'n', 'Ñ': 'N',
+      'ä': 'a', 'ë': 'e', 'ï': 'i', 'ö': 'o', 'ü': 'u',
+      'Ä': 'A', 'Ë': 'E', 'Ï': 'I', 'Ö': 'O', 'Ü': 'U'
+    };
+    let limpio = texto;
+    for (let [original, reemplazo] of Object.entries(mapa)) {
+      limpio = limpio.replace(new RegExp(original, 'g'), reemplazo);
+    }
+    limpio = limpio.replace(/[^a-zA-Z0-9\s\-+]/g, '');
+    return limpio.trim();
+  }
+
   const PAPAS_EXTRA = { nombre: 'Papas Extra', precio: 17, ingredientes: '130 gramos de papa.' };
   const categorias = [
     { id: 'alitas', nombre: 'ALITAS', emoji: '🍗', permitePapas: true, grupos: [
       { titulo: 'Alitas', items: [
-        { nombre: 'Alitas BBQ', precio: 67, ingredientes: 'Plato hamburguesero, 5 PIEZAS de alas Medianas/grandes, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' },
-        { nombre: 'Alitas Mango Habanero', precio: 67, ingredientes: 'Plato hamburguesero, 5 PIEZAS de alas Medianas/grandes, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' },
-        { nombre: 'Alitas Habanero', precio: 67, ingredientes: 'Plato hamburguesero, 5 PIEZAS de alas Medianas/grandes, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' },
-        { nombre: 'Alitas Buffalo Clásica', precio: 67, ingredientes: 'Plato hamburguesero, 5 PIEZAS de alas Medianas/grandes, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' },
-        { nombre: 'Alitas Buffalo Spicy', precio: 67, ingredientes: 'Plato hamburguesero, 5 PIEZAS de alas Medianas/grandes, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' }
+        { nombre: 'Alitas BBQ', precio: 67, ingredientes: 'Plato hamburguesero, 5 PIEZAS de alas Medianas/grandes, 3 trozos de zanahoria, 2 trozos de jicama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' },
+        { nombre: 'Alitas Mango Habanero', precio: 67, ingredientes: 'Plato hamburguesero, 5 PIEZAS de alas Medianas/grandes, 3 trozos de zanahoria, 2 trozos de jicama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' },
+        { nombre: 'Alitas Habanero', precio: 67, ingredientes: 'Plato hamburguesero, 5 PIEZAS de alas Medianas/grandes, 3 trozos de zanahoria, 2 trozos de jicama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' },
+        { nombre: 'Alitas Buffalo Clasica', precio: 67, ingredientes: 'Plato hamburguesero, 5 PIEZAS de alas Medianas/grandes, 3 trozos de zanahoria, 2 trozos de jicama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' },
+        { nombre: 'Alitas Buffalo Spicy', precio: 67, ingredientes: 'Plato hamburguesero, 5 PIEZAS de alas Medianas/grandes, 3 trozos de zanahoria, 2 trozos de jicama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' }
       ]},
       { titulo: 'Alitas GRANDES', items: [
-        { nombre: 'Alitas GRANDES - BBQ', precio: 135, ingredientes: 'Plato grande, 12 PIEZAS de alitas MEDIANAS/CHICAS, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' },
-        { nombre: 'Alitas GRANDES - Mango Habanero', precio: 135, ingredientes: 'Plato grande, 12 PIEZAS de alitas MEDIANAS/CHICAS, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' },
-        { nombre: 'Alitas GRANDES - Habanero', precio: 135, ingredientes: 'Plato grande, 12 PIEZAS de alitas MEDIANAS/CHICAS, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' },
-        { nombre: 'Alitas GRANDES - Buffalo Clásica', precio: 135, ingredientes: 'Plato grande, 12 PIEZAS de alitas MEDIANAS/CHICAS, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' },
-        { nombre: 'Alitas GRANDES - Buffalo Spicy', precio: 135, ingredientes: 'Plato grande, 12 PIEZAS de alitas MEDIANAS/CHICAS, 3 trozos de zanahoria, 2 trozos de jícama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' }
+        { nombre: 'Alitas GRANDES - BBQ', precio: 135, ingredientes: 'Plato grande, 12 PIEZAS de alitas MEDIANAS/CHICAS, 3 trozos de zanahoria, 2 trozos de jicama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' },
+        { nombre: 'Alitas GRANDES - Mango Habanero', precio: 135, ingredientes: 'Plato grande, 12 PIEZAS de alitas MEDIANAS/CHICAS, 3 trozos de zanahoria, 2 trozos de jicama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' },
+        { nombre: 'Alitas GRANDES - Habanero', precio: 135, ingredientes: 'Plato grande, 12 PIEZAS de alitas MEDIANAS/CHICAS, 3 trozos de zanahoria, 2 trozos de jicama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' },
+        { nombre: 'Alitas GRANDES - Buffalo Clasica', precio: 135, ingredientes: 'Plato grande, 12 PIEZAS de alitas MEDIANAS/CHICAS, 3 trozos de zanahoria, 2 trozos de jicama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' },
+        { nombre: 'Alitas GRANDES - Buffalo Spicy', precio: 135, ingredientes: 'Plato grande, 12 PIEZAS de alitas MEDIANAS/CHICAS, 3 trozos de zanahoria, 2 trozos de jicama, 2 trozos de pepino, la verdura se baña ligeramente con pimienta y sal con limon' }
       ]}
     ]},
     { id: 'boneless', nombre: 'BONELESS', emoji: '🍗', permitePapas: true, grupos: [
@@ -321,22 +337,22 @@
         { nombre: 'Boneless BBQ', precio: 73, ingredientes: 'Plato Hamburguesero, 200 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon' },
         { nombre: 'Boneless Mango Habanero', precio: 73, ingredientes: 'Plato Hamburguesero, 200 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon' },
         { nombre: 'Boneless Habanero', precio: 73, ingredientes: 'Plato Hamburguesero, 200 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon' },
-        { nombre: 'Boneless Buffalo Clásica', precio: 73, ingredientes: 'Plato Hamburguesero, 200 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon' },
+        { nombre: 'Boneless Buffalo Clasica', precio: 73, ingredientes: 'Plato Hamburguesero, 200 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon' },
         { nombre: 'Boneless Buffalo Spicy', precio: 73, ingredientes: 'Plato Hamburguesero, 200 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon' }
       ]},
       { titulo: 'Boneless GRANDES', items: [
         { nombre: 'Boneless GRANDES - BBQ', precio: 140, ingredientes: 'Plato GRANDE, 400 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon' },
         { nombre: 'Boneless GRANDES - Mango Habanero', precio: 140, ingredientes: 'Plato GRANDE, 400 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon' },
         { nombre: 'Boneless GRANDES - Habanero', precio: 140, ingredientes: 'Plato GRANDE, 400 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon' },
-        { nombre: 'Boneless GRANDES - Buffalo Clásica', precio: 140, ingredientes: 'Plato GRANDE, 400 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon' },
+        { nombre: 'Boneless GRANDES - Buffalo Clasica', precio: 140, ingredientes: 'Plato GRANDE, 400 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon' },
         { nombre: 'Boneless GRANDES - Buffalo Spicy', precio: 140, ingredientes: 'Plato GRANDE, 400 gramos de Boneless MEDIANOS/CHICOS, 2 trozos de jicama, 2 trozos de pipino, 3 trozos de zanahoria, la verdura se baña ligeramente con pimienta y sal con limon' }
       ]}
     ]},
     { id: 'hamburguesas', nombre: 'HAMBURGUESAS', emoji: '🍔', permitePapas: true, grupos: [
       { titulo: 'Hamburguesas', items: [
-        { nombre: 'Hamburguesa Clásica', precio: 70, ingredientes: '80 gramos de carne de res, Q. amarillo, Q.oaxaca, jamon, lechuga, mayonesa, pan, salsa cátsup.' },
-        { nombre: 'Hamburguesa BBQ', precio: 72, ingredientes: '80 gramos de carne de res o trozos de pollo, Q.oaxaca, Tocino, Jamon, lechuga, mayonesa, pan, salsa cátsup, Baño de SALSA BBQ.' },
-        { nombre: 'Hamburguesa Hawaiana', precio: 75, ingredientes: '80 gramos de carne de res, Piña, Q. amarillo, Q.oaxaca, Tocino, Jamon, lechuga, mayonesa, pan, salsa cátsup.' },
+        { nombre: 'Hamburguesa Clasica', precio: 70, ingredientes: '80 gramos de carne de res, Q. amarillo, Q.oaxaca, jamon, lechuga, mayonesa, pan, salsa catsup.' },
+        { nombre: 'Hamburguesa BBQ', precio: 72, ingredientes: '80 gramos de carne de res o trozos de pollo, Q.oaxaca, Tocino, Jamon, lechuga, mayonesa, pan, salsa catsup, Baño de SALSA BBQ.' },
+        { nombre: 'Hamburguesa Hawaiana', precio: 75, ingredientes: '80 gramos de carne de res, Piña, Q. amarillo, Q.oaxaca, Tocino, Jamon, lechuga, mayonesa, pan, salsa catsup.' },
         { nombre: 'Hamburguesa de Pollo', precio: 70, ingredientes: 'Trozos de Pollo, Lechuga, Q, Oaxaca, Jamon, Catsup, Mayonesa y Pan.' },
         { nombre: 'Hamburguesa Mango Habanero', precio: 72, ingredientes: '80 gramos de carne de res o trozos de pollo, Q.oaxaca, Tocino, Jamon, lechuga, mayonesa, pan, Baño de SALSA MANGO HABANERO.' },
         { nombre: 'Hamburguesa Buffalo', precio: 72, ingredientes: '80 gramos de carne de res o trozos de pollo, Q.oaxaca, Tocino, Jamon, lechuga, mayonesa, pan, Baño de SALSA BUFFALO.' },
@@ -347,15 +363,15 @@
     ]},
     { id: 'hotdogs', nombre: 'HOT DOGS', emoji: '🌭', permitePapas: false, grupos: [
       { titulo: 'Hot Dogs', items: [
-        { nombre: 'Hot Dog Sencilla', precio: 25, ingredientes: 'Plato cuadrado, Pan de hotdog, 1 salchicha, 1 jamon, crema, mayonesa, queso amarillo, picadillo de chile, picadillo de jitomate, cátchup' },
-        { nombre: 'Hot Dog Especial', precio: 36, ingredientes: 'Plato cuadrado, Pan de hotdog, 1 salchicha + ½ media de salchicha cortada a lo largo, 1 jamon, 1 tocino, queso Oaxaca, crema, mayonesa, queso amarillo, cátchup' },
-        { nombre: 'Hot Dog Ranchero', precio: 36, ingredientes: 'Plato cuadrado, Pan de hotdog, 1 salchicha, 1 jalapeño cortado a la mitad (retirar venas), 1 jamon, 1 tocino, queso Oaxaca, mayonesa, queso amarillo, cátchup' }
+        { nombre: 'Hot Dog Sencilla', precio: 25, ingredientes: 'Plato cuadrado, Pan de hotdog, 1 salchicha, 1 jamon, crema, mayonesa, queso amarillo, picadillo de chile, picadillo de jitomate, catchup' },
+        { nombre: 'Hot Dog Especial', precio: 36, ingredientes: 'Plato cuadrado, Pan de hotdog, 1 salchicha + 1/2 media de salchicha cortada a lo largo, 1 jamon, 1 tocino, queso Oaxaca, crema, mayonesa, queso amarillo, catchup' },
+        { nombre: 'Hot Dog Ranchero', precio: 36, ingredientes: 'Plato cuadrado, Pan de hotdog, 1 salchicha, 1 jalapeño cortado a la mitad (retirar venas), 1 jamon, 1 tocino, queso Oaxaca, mayonesa, queso amarillo, catchup' }
       ]}
     ]},
     { id: 'papas', nombre: 'PAPAS Y SALCHICHA', emoji: '🍟', permitePapas: false, grupos: [
       { titulo: 'Papas y salchicha', items: [
-        { nombre: 'Papas Francesas', precio: 42, ingredientes: 'Plato hamburguesero, 270 gramos de papas, cátsup, queso amarillo, crema, valentina' },
-        { nombre: 'Salchipapas', precio: 42, ingredientes: 'Plato hamburguesero, 230 gramos de papas, 2 salchichas cortadas en rebanadas, cátsup, queso amarillo, crema, valentina' },
+        { nombre: 'Papas Francesas', precio: 42, ingredientes: 'Plato hamburguesero, 270 gramos de papas, catsup, queso amarillo, crema, valentina' },
+        { nombre: 'Salchipapas', precio: 42, ingredientes: 'Plato hamburguesero, 230 gramos de papas, 2 salchichas cortadas en rebanadas, catsup, queso amarillo, crema, valentina' },
         { nombre: 'Salchipulpos', precio: 42, ingredientes: 'Plato hamburguesero, 5 salchichas cortadas a la mitad de tal manera que queden 10 cilindros, hacer corte de cruz en forma de patitas de pulpo en los 10 cilindros' }
       ]}
     ]},
@@ -363,14 +379,14 @@
       { titulo: 'Botanas', items: [
         { nombre: 'Nuggets', precio: 52, ingredientes: 'Plato hamburguesero, 5 Nuguetes de pollo, 100g de papa y aderezo o salsas' },
         { nombre: 'Palitos de queso', precio: 50, ingredientes: 'Plato hamburguesero, 5 palitos de queso, 2 trozos de pepino, 2 trozos de zanahoria y aderezo vasito. O salsas' },
-        { nombre: 'Aros de Cebolla', precio: 36, ingredientes: 'Plato Hamburguesero, 5 aros de cebolla, crema, cátsup y salsa' },
+        { nombre: 'Aros de Cebolla', precio: 36, ingredientes: 'Plato Hamburguesero, 5 aros de cebolla, crema, catsup y salsa' },
         { nombre: 'Sincronizada', precio: 40, ingredientes: '2 tortillas de harina, plato plano cuadrado, queso Oaxaca, 2 jamones, 100 g de papas' },
         { nombre: 'Sincronizada Sencilla', precio: 25, ingredientes: '2 tortillas de harina, queso Oaxaca, 1 jamón' }
       ]}
     ]},
     { id: 'sopas', nombre: 'SOPAS', emoji: '🍜', permitePapas: false, grupos: [
       { titulo: 'Sopas', items: [
-        { nombre: 'Sopa Maruchan', precio: 25, ingredientes: 'Tenedor, ½ limon, maruchan y agua caliente' },
+        { nombre: 'Sopa Maruchan', precio: 25, ingredientes: 'Tenedor, 1/2 limon, maruchan y agua caliente' },
         { nombre: 'Buldak/Ramen sencillo', precio: 50, ingredientes: 'Leche, queso oaxaca, agua hervida, buldak con salsas y saborizantes' }
       ]}
     ]},
@@ -384,18 +400,18 @@
         { nombre: 'Crepa Ferrero Rocher', precio: 70, ingredientes: '1 Ferrero Rocher, Nutella, crepa base' },
         { nombre: 'Crepa Kinder Delice', precio: 70, ingredientes: '1 Kinder Delice, crepa base' },
         { nombre: 'Crepa Oreo', precio: 60, ingredientes: 'Galletas Oreo trituradas, crema batida' },
-        { nombre: 'Crepa Pay de limón', precio: 65, ingredientes: 'Crepa con relleno de limón y merengue' }
+        { nombre: 'Crepa Pay de limon', precio: 65, ingredientes: 'Crepa con relleno de limon y merengue' }
       ]}
     ]},
-    { id: 'frappes', nombre: 'FRAPPÉS', emoji: '🥤', permitePapas: false, grupos: [
-      { titulo: 'Frappés', items: [
-        { nombre: 'Frappé Oreo', precio: 48, ingredientes: '1 vaso de hielo y leche lleno a ras, 4 galletas de oreo, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso' },
-        { nombre: 'Frappé Mazapán', precio: 48, ingredientes: '1 vaso de hielo y leche lleno a ras, 3 mazapanes chicos o 2 grandes, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso' },
-        { nombre: 'Frappé Moka', precio: 48, ingredientes: '1 vaso de hielo y leche lleno a ras, 1 cucharada de café y combinar con azucar, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso. Y amargo dulce' },
-        { nombre: 'Frappé Fresas con crema', precio: 48, ingredientes: '1 vaso de hielo y leche lleno a ras, 40 gramos de saborizante de fresas con crema, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso' },
-        { nombre: 'Frappé Algodón de Azúcar', precio: 48, ingredientes: '1 vaso de hielo y leche lleno a ras, 40 gramos de saborizante de algodón de azucar, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso' },
-        { nombre: 'Frappé Choco Avellana', precio: 48, ingredientes: '1 vaso de hielo y leche lleno a ras, 40 gramos de saborizante de choco avellana, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso' },
-        { nombre: 'Frappé Cafe', precio: 48, ingredientes: '1 vaso de hielo y leche lleno a ras, café al gusto, 1 cucharada de base, licuar' }
+    { id: 'frappes', nombre: 'FRAPPES', emoji: '🥤', permitePapas: false, grupos: [
+      { titulo: 'Frappes', items: [
+        { nombre: 'Frappe Oreo', precio: 48, ingredientes: '1 vaso de hielo y leche lleno a ras, 4 galletas de oreo, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso' },
+        { nombre: 'Frappe Mazapan', precio: 48, ingredientes: '1 vaso de hielo y leche lleno a ras, 3 mazapanes chicos o 2 grandes, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso' },
+        { nombre: 'Frappe Moka', precio: 48, ingredientes: '1 vaso de hielo y leche lleno a ras, 1 cucharada de cafe y combinar con azucar, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso. Y amargo dulce' },
+        { nombre: 'Frappe Fresas con crema', precio: 48, ingredientes: '1 vaso de hielo y leche lleno a ras, 40 gramos de saborizante de fresas con crema, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso' },
+        { nombre: 'Frappe Algodon de Azucar', precio: 48, ingredientes: '1 vaso de hielo y leche lleno a ras, 40 gramos de saborizante de algodon de azucar, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso' },
+        { nombre: 'Frappe Choco Avellana', precio: 48, ingredientes: '1 vaso de hielo y leche lleno a ras, 40 gramos de saborizante de choco avellana, 1 cucharada de base, y licuar por 3 minutos a velocidad lenta, tiene que quedar espeso' },
+        { nombre: 'Frappe Cafe', precio: 48, ingredientes: '1 vaso de hielo y leche lleno a ras, cafe al gusto, 1 cucharada de base, licuar' }
       ]}
     ]},
     { id: 'malteadas', nombre: 'MALTEADAS', emoji: '🥛', permitePapas: false, grupos: [
@@ -407,12 +423,12 @@
     ]},
     { id: 'jelly', nombre: 'JELLY COFFEE', emoji: '☕', permitePapas: false, grupos: [
       { titulo: 'Jelly Coffee', items: [
-        { nombre: 'Jelly Coffee Oreo', precio: 60, ingredientes: 'Café, leche, gelatina de café, galletas Oreo' },
-        { nombre: 'Jelly Coffee Fresas con crema', precio: 60, ingredientes: 'Café, leche, gelatina de café, saborizante de fresas con crema' },
-        { nombre: 'Jelly Coffee Red Velvet', precio: 60, ingredientes: 'Café, leche, gelatina, sabor red velvet' },
-        { nombre: 'Jelly Coffee Mazapán', precio: 60, ingredientes: 'Café, leche, gelatina, mazapán' },
-        { nombre: 'Jelly Coffee Coco', precio: 60, ingredientes: 'Café, leche, gelatina, sabor coco' },
-        { nombre: 'Jelly Coffee Choco Avellana', precio: 60, ingredientes: 'Café, leche, gelatina, choco avellana' }
+        { nombre: 'Jelly Coffee Oreo', precio: 60, ingredientes: 'Cafe, leche, gelatina de cafe, galletas Oreo' },
+        { nombre: 'Jelly Coffee Fresas con crema', precio: 60, ingredientes: 'Cafe, leche, gelatina de cafe, saborizante de fresas con crema' },
+        { nombre: 'Jelly Coffee Red Velvet', precio: 60, ingredientes: 'Cafe, leche, gelatina, sabor red velvet' },
+        { nombre: 'Jelly Coffee Mazapan', precio: 60, ingredientes: 'Cafe, leche, gelatina, mazapan' },
+        { nombre: 'Jelly Coffee Coco', precio: 60, ingredientes: 'Cafe, leche, gelatina, sabor coco' },
+        { nombre: 'Jelly Coffee Choco Avellana', precio: 60, ingredientes: 'Cafe, leche, gelatina, choco avellana' }
       ]}
     ]},
     { id: 'soda', nombre: 'SODA ITALIANA', emoji: '🥤', permitePapas: false, grupos: [
@@ -581,7 +597,13 @@
           if (item.especial === 'crepa_normal') {
             abrirAsistenteCrepa();
           } else {
-            agregarProducto(item);
+            const nombreLimpio = limpiarTexto(item.nombre);
+            const ingredientesLimpios = limpiarTexto(item.ingredientes || '');
+            agregarProducto({ 
+              nombre: nombreLimpio, 
+              precio: item.precio, 
+              ingredientes: ingredientesLimpios 
+            });
           }
         });
         grupoDiv.appendChild(btn);
@@ -618,7 +640,7 @@
 
   function abrirAsistenteCrepa() {
     const sabores = ['Nutella', 'Merm.Fresa', 'Merm.Zarzamora', 'Lechera', 'Cajeta', 'Philadelphia'];
-    const frutas = ['Fresas', 'Plátano', 'Durazno', 'Sin fruta'];
+    const frutas = ['Fresas', 'Platano', 'Durazno', 'Sin fruta'];
     const toppings = ['Nuez', 'Chispas Chocolate', 'Almendras', 'Sin topping'];
 
     let saboresSeleccionados = [];
@@ -714,12 +736,16 @@
         return;
       }
 
+      const saboresLimpios = saboresSeleccionados.map(s => limpiarTexto(s));
+      const frutasLimpios = frutasSeleccionadas.map(f => limpiarTexto(f));
+      const toppingsLimpios = toppingsSeleccionados.map(t => limpiarTexto(t));
+
       let nombreCrepa = 'Crepa Normal';
-      if (saboresSeleccionados.length > 0) nombreCrepa += ' - ' + saboresSeleccionados.join(' + ');
-      if (frutasSeleccionadas.length > 0) nombreCrepa += ' - ' + frutasSeleccionadas.join(' + ');
-      if (toppingsSeleccionados.length > 0) nombreCrepa += ' - ' + toppingsSeleccionados.join(' + ');
+      if (saboresLimpios.length > 0) nombreCrepa += ' - ' + saboresLimpios.join(' + ');
+      if (frutasLimpios.length > 0) nombreCrepa += ' - ' + frutasLimpios.join(' + ');
+      if (toppingsLimpios.length > 0) nombreCrepa += ' - ' + toppingsLimpios.join(' + ');
       
-      const ingredientes = `Masa de crepa, ${saboresSeleccionados.join(', ')}, ${frutasSeleccionadas.join(', ')}, ${toppingsSeleccionados.join(', ')}`;
+      const ingredientes = `Masa de crepa, ${saboresLimpios.join(', ')}, ${frutasLimpios.join(', ')}, ${toppingsLimpios.join(', ')}`;
       
       agregarProducto({ nombre: nombreCrepa, precio: 45, ingredientes: ingredientes });
       modalSubproductos.style.display = 'none';
@@ -736,10 +762,13 @@
   }
 
   function agregarProducto(item) {
+    const nombreLimpio = limpiarTexto(item.nombre);
+    const ingredientesLimpios = limpiarTexto(item.ingredientes || '');
+    
     pedidoActual.push({
-      nombre: item.nombre,
+      nombre: nombreLimpio,
       precio: item.precio,
-      ingredientes: item.ingredientes || '',
+      ingredientes: ingredientesLimpios,
       nota: ''
     });
     renderPedidoActual();
@@ -776,12 +805,16 @@
     contadorItemsSpan.textContent = pedidoActual.length;
   }
 
+  // ================================================================
+  // 📋 GENERAR TEXTO COMANDA - ANCHO 46 (76mm útiles)
+  // ================================================================
   function generarTextoComanda(ped, productosOrdenados) {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    const ANCHO = 38;
+    // 46 caracteres = 76mm (80mm - 2mm izquierda - 2mm derecha)
+    const ANCHO = 46;
     
     function centrar(t) {
       const espacios = Math.max(0, Math.floor((ANCHO - t.length) / 2));
@@ -794,19 +827,16 @@
     }
 
     function dividirTexto(texto, maxLen) {
-      // Dividir por espacios pero respetando palabras completas
       const palabras = texto.split(' ');
       const lineas = [];
       let lineaActual = '';
       
       for (let palabra of palabras) {
-        // Si la palabra es más larga que maxLen, cortarla
         while (palabra.length > maxLen) {
           if (lineaActual) {
             lineas.push(lineaActual);
             lineaActual = '';
           }
-          // Cortar la palabra en el maxLen
           const parte = palabra.substring(0, maxLen);
           lineas.push(parte);
           palabra = palabra.substring(maxLen);
@@ -825,6 +855,7 @@
 
     let texto = '';
     
+    // Margen superior: 1 línea
     texto += '\n';
     
     texto += '='.repeat(ANCHO) + '\n';
@@ -835,11 +866,9 @@
     texto += '-'.repeat(ANCHO) + '\n';
     texto += ' PRODUCTOS (' + productosOrdenados.length + ')\n';
     
-    productosOrdenados.forEach((prod) => {
+    productosOrdenados.forEach((prod, index) => {
       const nombreProducto = prod.nombre;
-      
-      // Limpiar el nombre y usar "1X" en lugar de corchetes
-      const nombreLimpio = nombreProducto.replace(/[^a-zA-Z0-9\s\-+áéíóúÁÉÍÓÚñÑ]/g, '').trim();
+      const nombreLimpio = limpiarTexto(nombreProducto);
       
       const maxLenNombre = ANCHO - 6;
       const lineasNombre = dividirTexto(nombreLimpio, maxLenNombre);
@@ -853,26 +882,33 @@
       });
       
       if (prod.nota) {
-        const lineasNota = dividirTexto('   Nota: ' + prod.nota, ANCHO - 4);
+        const lineasNota = dividirTexto('     Nota: ' + prod.nota, ANCHO - 4);
         lineasNota.forEach(linea => {
           texto += '     ' + linea + '\n';
         });
       }
+      
+      // Espacio entre productos: 0.5 líneas
+      if (index < productosOrdenados.length - 1) {
+        texto += ' \n';
+      }
     });
 
     if (ped.notaPedido) {
-      const lineasNota = dividirTexto('Nota: ' + ped.notaPedido, ANCHO - 2);
       texto += '\n';
+      const lineasNota = dividirTexto('Nota del pedido: ' + ped.notaPedido, ANCHO - 2);
       lineasNota.forEach(linea => {
         texto += '  ' + linea + '\n';
       });
     }
 
+    texto += '\n';
     texto += '-'.repeat(ANCHO) + '\n';
     texto += linea('Total: $' + ped.total.toFixed(2)) + '\n';
     texto += centrar(fecha) + '\n';
     texto += '='.repeat(ANCHO) + '\n';
     
+    // Margen inferior: 1 línea
     texto += '\n';
 
     return texto;
@@ -921,7 +957,7 @@
 
   function imprimirPC(ped, productosOrdenados) {
     const texto = generarTextoComanda(ped, productosOrdenados);
-    const ventana = window.open('', '_blank', 'width=400,height=500');
+    const ventana = window.open('', '_blank', 'width=480,height=600');
     ventana.document.write(`
       <!DOCTYPE html>
       <html>
@@ -971,18 +1007,23 @@
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: 'PRODUCTOS (' + productosOrdenados.length + ')', bold: 0, align: 0, format: 0 });
 
-    productosOrdenados.forEach((prod) => {
-      const nombreLimpio = prod.nombre.replace(/[^a-zA-Z0-9\s\-+áéíóúÁÉÍÓÚñÑ]/g, '').trim();
+    productosOrdenados.forEach((prod, index) => {
+      const nombreLimpio = limpiarTexto(prod.nombre);
       printEntries.push({ type: 0, content: '  1X ' + nombreLimpio, bold: 0, align: 0, format: 0 });
       if (prod.nota) {
         printEntries.push({ type: 0, content: '     Nota: ' + prod.nota, bold: 0, align: 0, format: 0 });
       }
+      if (index < productosOrdenados.length - 1) {
+        printEntries.push({ type: 0, content: ' ', bold: 0, align: 0, format: 0 });
+      }
     });
 
     if (ped.notaPedido) {
+      printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
       printEntries.push({ type: 0, content: 'Nota: ' + ped.notaPedido, bold: 0, align: 0, format: 0 });
     }
 
+    printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: 'Total: $' + ped.total.toFixed(2), bold: 1, align: 1, format: 1 });
     printEntries.push({ type: 0, content: fecha, bold: 0, align: 1, format: 0 });
@@ -1150,12 +1191,12 @@
     const numero = await incrementarContador();
     if (numero === null) return;
 
-    const notaGeneral = notaPedidoInput.value.trim();
+    const notaGeneral = limpiarTexto(notaPedidoInput.value.trim());
     const productosParaEnviar = pedidoActual.map(p => ({
-      nombre: p.nombre,
+      nombre: limpiarTexto(p.nombre),
       precio: p.precio,
-      ingredientes: p.ingredientes,
-      nota: p.nota || '',
+      ingredientes: limpiarTexto(p.ingredientes || ''),
+      nota: limpiarTexto(p.nota || ''),
       estadoProducto: 'preparando'
     }));
     const total = pedidoActual.reduce((sum, p) => sum + p.precio, 0);
