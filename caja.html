@@ -714,7 +714,11 @@
         return;
       }
 
-      const nombreCrepa = `Crepa Normal - ${saboresSeleccionados.join(' + ')} - ${frutasSeleccionadas.join(' + ')} - ${toppingsSeleccionados.join(' + ')}`;
+      let nombreCrepa = 'Crepa Normal';
+      if (saboresSeleccionados.length > 0) nombreCrepa += ' - ' + saboresSeleccionados.join(' + ');
+      if (frutasSeleccionadas.length > 0) nombreCrepa += ' - ' + frutasSeleccionadas.join(' + ');
+      if (toppingsSeleccionados.length > 0) nombreCrepa += ' - ' + toppingsSeleccionados.join(' + ');
+      
       const ingredientes = `Masa de crepa, ${saboresSeleccionados.join(', ')}, ${frutasSeleccionadas.join(', ')}, ${toppingsSeleccionados.join(', ')}`;
       
       agregarProducto({ nombre: nombreCrepa, precio: 45, ingredientes: ingredientes });
@@ -777,7 +781,7 @@
     const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    const ANCHO = 40;
+    const ANCHO = 38;
     
     function centrar(t) {
       const espacios = Math.max(0, Math.floor((ANCHO - t.length) / 2));
@@ -820,18 +824,19 @@
     productosOrdenados.forEach((prod) => {
       const nombreProducto = prod.nombre;
       
-      if (nombreProducto.length <= ANCHO - 6) {
-        texto += '  [ ] ' + nombreProducto + '\n';
-      } else {
-        const lineasNombre = dividirTexto(nombreProducto, ANCHO - 6);
-        lineasNombre.forEach((linea, idx) => {
-          if (idx === 0) {
-            texto += '  [ ] ' + linea + '\n';
-          } else {
-            texto += '       ' + linea + '\n';
-          }
-        });
-      }
+      // Limpiar el nombre y usar "1X" en lugar de corchetes
+      const nombreLimpio = nombreProducto.replace(/[^a-zA-Z0-9\s\-+]/g, '').trim();
+      
+      const maxLenNombre = ANCHO - 6;
+      const lineasNombre = dividirTexto(nombreLimpio, maxLenNombre);
+      
+      lineasNombre.forEach((linea, idx) => {
+        if (idx === 0) {
+          texto += '  1X ' + linea + '\n';
+        } else {
+          texto += '     ' + linea + '\n';
+        }
+      });
       
       if (prod.nota) {
         const lineasNota = dividirTexto('   Nota: ' + prod.nota, ANCHO - 4);
@@ -916,7 +921,7 @@
             padding: 0;
             margin: 0;
             white-space: pre-wrap;
-            font-size: 11pt;
+            font-size: 10pt;
             max-width: 80mm;
           }
           @media print { body { padding: 0; margin: 0; } .no-print { display: none; } }
@@ -953,9 +958,10 @@
     printEntries.push({ type: 0, content: 'PRODUCTOS (' + productosOrdenados.length + ')', bold: 0, align: 0, format: 0 });
 
     productosOrdenados.forEach((prod) => {
-      printEntries.push({ type: 0, content: '  [ ] ' + prod.nombre, bold: 0, align: 0, format: 0 });
+      const nombreLimpio = prod.nombre.replace(/[^a-zA-Z0-9\s\-+]/g, '').trim();
+      printEntries.push({ type: 0, content: '  1X ' + nombreLimpio, bold: 0, align: 0, format: 0 });
       if (prod.nota) {
-        printEntries.push({ type: 0, content: '   Nota: ' + prod.nota, bold: 0, align: 0, format: 0 });
+        printEntries.push({ type: 0, content: '     Nota: ' + prod.nota, bold: 0, align: 0, format: 0 });
       }
     });
 
