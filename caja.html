@@ -794,10 +794,24 @@
     }
 
     function dividirTexto(texto, maxLen) {
+      // Dividir por espacios pero respetando palabras completas
       const palabras = texto.split(' ');
       const lineas = [];
       let lineaActual = '';
+      
       for (let palabra of palabras) {
+        // Si la palabra es más larga que maxLen, cortarla
+        while (palabra.length > maxLen) {
+          if (lineaActual) {
+            lineas.push(lineaActual);
+            lineaActual = '';
+          }
+          // Cortar la palabra en el maxLen
+          const parte = palabra.substring(0, maxLen);
+          lineas.push(parte);
+          palabra = palabra.substring(maxLen);
+        }
+        
         if ((lineaActual + ' ' + palabra).length <= maxLen) {
           lineaActual += (lineaActual ? ' ' : '') + palabra;
         } else {
@@ -825,7 +839,7 @@
       const nombreProducto = prod.nombre;
       
       // Limpiar el nombre y usar "1X" en lugar de corchetes
-      const nombreLimpio = nombreProducto.replace(/[^a-zA-Z0-9\s\-+]/g, '').trim();
+      const nombreLimpio = nombreProducto.replace(/[^a-zA-Z0-9\s\-+áéíóúÁÉÍÓÚñÑ]/g, '').trim();
       
       const maxLenNombre = ANCHO - 6;
       const lineasNombre = dividirTexto(nombreLimpio, maxLenNombre);
@@ -958,7 +972,7 @@
     printEntries.push({ type: 0, content: 'PRODUCTOS (' + productosOrdenados.length + ')', bold: 0, align: 0, format: 0 });
 
     productosOrdenados.forEach((prod) => {
-      const nombreLimpio = prod.nombre.replace(/[^a-zA-Z0-9\s\-+]/g, '').trim();
+      const nombreLimpio = prod.nombre.replace(/[^a-zA-Z0-9\s\-+áéíóúÁÉÍÓÚñÑ]/g, '').trim();
       printEntries.push({ type: 0, content: '  1X ' + nombreLimpio, bold: 0, align: 0, format: 0 });
       if (prod.nota) {
         printEntries.push({ type: 0, content: '     Nota: ' + prod.nota, bold: 0, align: 0, format: 0 });
