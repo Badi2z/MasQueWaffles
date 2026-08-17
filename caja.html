@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-  <title>MasQueWaffles - Caja</title>
+  <title>WingerMan - Caja</title>
   <script type="importmap">
     {
       "imports": {
@@ -137,7 +137,6 @@
     .resumen-pedido { border-bottom: 1px solid #ddd; padding: 8px 0; }
     .resumen-pedido .pedido-header { font-weight: bold; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
     .resumen-pedido .productos-lista { font-size: 0.85rem; padding-left: 12px; }
-    /* Modal de impresión */
     .modal-impresion-overlay {
       position: fixed;
       top: 0;
@@ -226,7 +225,7 @@
   </style>
 </head>
 <body>
-<div class="header"><h1>🧇 Mas<span>QueWaffles</span></h1><div class="turno" id="turnoDisplay">Turno #<span id="turnoNum">1</span></div></div>
+<div class="header"><h1>🧇 Winger<span>Man</span></h1><div class="turno" id="turnoDisplay">Turno #<span id="turnoNum">1</span></div></div>
 
 <div class="main-container">
   <div class="col-izquierda">
@@ -259,7 +258,6 @@
 
 <div class="modal-overlay" id="modalSubproductos" style="display:none;"><div class="modal" id="modalContenido"></div></div>
 
-<!-- ===== MODAL DE IMPRESIÓN ===== -->
 <div class="modal-impresion-overlay" id="modalImpresionCaja">
   <div class="modal-impresion">
     <h2>🖨️ Selecciona método</h2>
@@ -283,9 +281,6 @@
 </div>
 
 <script type="module">
-  // ================================================================
-  // 🔴 CONFIGURACIÓN DE FIREBASE
-  // ================================================================
   const firebaseConfig = {
     apiKey: "AIzaSyAtUbhUZW9qZlpueY3JrYXgnkcXfHYdUc0",
     authDomain: "masquewaffles.firebaseapp.com",
@@ -294,7 +289,6 @@
     messagingSenderId: "444667770238",
     appId: "1:444667770238:web:ce3c8ccb72b713be74af2f"
   };
-  // ================================================================
 
   import { initializeApp } from 'firebase/app';
   import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, getDoc, setDoc, where, writeBatch, getDocs } from 'firebase/firestore';
@@ -304,9 +298,6 @@
   const db = getFirestore(app);
   const auth = getAuth(app);
 
-  // ================================================================
-  // TODOS LOS PRODUCTOS (12 CATEGORÍAS COMPLETAS)
-  // ================================================================
   const PAPAS_EXTRA = { nombre: 'Papas Extra', precio: 17, ingredientes: '130 gramos de papa.' };
   const categorias = [
     { id: 'alitas', nombre: 'ALITAS', emoji: '🍗', permitePapas: true, grupos: [
@@ -432,9 +423,6 @@
     ]}
   ];
 
-  // ================================================================
-  // VARIABLES Y REFERENCIAS
-  // ================================================================
   let pedidoActual = [];
   let notaPedidoGlobal = '';
   let turnoActual = 1;
@@ -460,7 +448,6 @@
   const modalSubproductos = document.getElementById('modalSubproductos');
   const modalContenido = document.getElementById('modalContenido');
   
-  // Modal de impresión
   const modalImpresionCaja = document.getElementById('modalImpresionCaja');
   const btnCerrarModalCaja = document.getElementById('btnCerrarModalCaja');
   const opcionPCCaja = document.getElementById('opcionPCCaja');
@@ -469,14 +456,10 @@
   let pedidoParaImprimir = null;
   let productosParaImprimir = null;
 
-  // Variables para Bluetooth
   let dispositivoBT = null;
   let caracteristicaBT = null;
   let servidorBT = null;
 
-  // ================================================================
-  // FUNCIONES DE FIRESTORE
-  // ================================================================
   async function getTurnoConfig() {
     const docRef = doc(db, 'config', 'turnoActual');
     const docSnap = await getDoc(docRef);
@@ -555,9 +538,6 @@
     return pedidos;
   }
 
-  // ================================================================
-  // RENDERIZAR CATEGORÍAS
-  // ================================================================
   function renderCategorias() {
     categoriasGrid.innerHTML = '';
     categorias.forEach(cat => {
@@ -572,9 +552,6 @@
     });
   }
 
-  // ================================================================
-  // MODAL DE PRODUCTOS
-  // ================================================================
   function abrirModalCategoria(cat) {
     modalContenido.innerHTML = '';
     const titulo = document.createElement('h3');
@@ -639,9 +616,6 @@
     document.addEventListener('keydown', cerrarConEsc);
   }
 
-  // ================================================================
-  // ASISTENTE DE CREPA
-  // ================================================================
   function abrirAsistenteCrepa() {
     const sabores = ['Nutella', 'Merm.Fresa', 'Merm.Zarzamora', 'Lechera', 'Cajeta', 'Philadelphia'];
     const frutas = ['Fresas', 'Plátano', 'Durazno', 'Sin fruta'];
@@ -757,9 +731,6 @@
     modalSubproductos.style.display = 'flex';
   }
 
-  // ================================================================
-  // MANEJO DEL PEDIDO ACTUAL
-  // ================================================================
   function agregarProducto(item) {
     pedidoActual.push({
       nombre: item.nombre,
@@ -801,15 +772,11 @@
     contadorItemsSpan.textContent = pedidoActual.length;
   }
 
-  // ================================================================
-  // 📋 FUNCION PARA GENERAR TEXTO DE LA COMANDA (MÁRGENES MEJORADOS)
-  // ================================================================
   function generarTextoComanda(ped, productosOrdenados) {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    // ANCHO para 80mm: 40 caracteres por línea
     const ANCHO = 40;
     
     function centrar(t) {
@@ -840,24 +807,21 @@
 
     let texto = '';
     
-    // 🔹 MARGEN SUPERIOR: 1 línea en blanco (~0.1cm)
     texto += '\n';
     
     texto += '='.repeat(ANCHO) + '\n';
-    texto += centrar('MasQueWaffles') + '\n';
+    texto += centrar('WingerMan') + '\n';
     texto += centrar('Comanda') + '\n';
     texto += '='.repeat(ANCHO) + '\n';
     texto += linea('Pedido #' + ped.numeroPedido + '   ' + hora) + '\n';
     texto += '-'.repeat(ANCHO) + '\n';
-    texto += ' PRODUCTOS\n';
+    texto += ' PRODUCTOS (' + productosOrdenados.length + ')\n';
     
     productosOrdenados.forEach((prod) => {
       const nombreProducto = prod.nombre;
-      const precio = '$' + prod.precio.toFixed(2);
       
-      if (nombreProducto.length + precio.length + 6 <= ANCHO) {
-        const espacios = ANCHO - 6 - nombreProducto.length - precio.length;
-        texto += '  [ ] ' + nombreProducto + ' '.repeat(Math.max(0, espacios)) + precio + '\n';
+      if (nombreProducto.length <= ANCHO - 6) {
+        texto += '  [ ] ' + nombreProducto + '\n';
       } else {
         const lineasNombre = dividirTexto(nombreProducto, ANCHO - 6);
         lineasNombre.forEach((linea, idx) => {
@@ -867,8 +831,6 @@
             texto += '       ' + linea + '\n';
           }
         });
-        const esp = Math.max(0, ANCHO - 6 - precio.length);
-        texto += '       ' + ' '.repeat(esp) + precio + '\n';
       }
       
       if (prod.nota) {
@@ -892,16 +854,11 @@
     texto += centrar(fecha) + '\n';
     texto += '='.repeat(ANCHO) + '\n';
     
-    // 🔹 MARGEN INFERIOR: 2 líneas en blanco (~0.2cm) para el corte
-    texto += '\n\n';
+    texto += '\n';
 
     return texto;
   }
 
-  // ================================================================
-  // 🖨️ FUNCIONES DE IMPRESIÓN
-  // ================================================================
-  
   async function conectarBluetooth() {
     try {
       if (dispositivoBT) {
@@ -989,13 +946,14 @@
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
     let printEntries = [];
-    printEntries.push({ type: 0, content: 'MasQueWaffles', bold: 1, align: 1, format: 1 });
+    printEntries.push({ type: 0, content: 'WingerMan', bold: 1, align: 1, format: 1 });
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: 'Pedido #' + ped.numeroPedido + '  ' + hora, bold: 1, align: 0, format: 0 });
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
+    printEntries.push({ type: 0, content: 'PRODUCTOS (' + productosOrdenados.length + ')', bold: 0, align: 0, format: 0 });
 
     productosOrdenados.forEach((prod) => {
-      printEntries.push({ type: 0, content: '  [ ] ' + prod.nombre + ' - $' + prod.precio.toFixed(2), bold: 0, align: 0, format: 0 });
+      printEntries.push({ type: 0, content: '  [ ] ' + prod.nombre, bold: 0, align: 0, format: 0 });
       if (prod.nota) {
         printEntries.push({ type: 0, content: '   Nota: ' + prod.nota, bold: 0, align: 0, format: 0 });
       }
@@ -1008,8 +966,6 @@
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: 'Total: $' + ped.total.toFixed(2), bold: 1, align: 1, format: 1 });
     printEntries.push({ type: 0, content: fecha, bold: 0, align: 1, format: 0 });
-    // Margen inferior
-    printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
 
     const jsonData = JSON.stringify(printEntries);
@@ -1048,7 +1004,7 @@
       }
 
       const encoder = new TextEncoder();
-      const textoCompleto = texto + '\n\n';
+      const textoCompleto = texto + '\n';
       
       const chunkSize = 200;
       for (let i = 0; i < textoCompleto.length; i += chunkSize) {
@@ -1081,18 +1037,12 @@
     }
   }
 
-  // ================================================================
-  // 🟢 FUNCIONES PARA ABRIR MODAL DE IMPRESIÓN
-  // ================================================================
   function abrirModalImpresion(ped, productosOrdenados) {
     pedidoParaImprimir = ped;
     productosParaImprimir = productosOrdenados;
     modalImpresionCaja.classList.add('visible');
   }
 
-  // ================================================================
-  // 🟢 EVENTOS DEL MODAL DE IMPRESIÓN
-  // ================================================================
   btnCerrarModalCaja.addEventListener('click', () => {
     modalImpresionCaja.classList.remove('visible');
   });
@@ -1124,9 +1074,6 @@
     }
   });
 
-  // ================================================================
-  // 🟢 ORDENAR PRODUCTOS
-  // ================================================================
   function ordenarProductos(productos) {
     const ordenGrupos = {
       'CREPAS': 1, 'ALITAS': 2, 'BONELESS': 3, 'HAMBURGUESAS': 4,
@@ -1161,9 +1108,6 @@
     });
   }
 
-  // ================================================================
-  // 🟢 BOTÓN: IMPRIMIR COMANDAS MANUAL DESDE CAJA
-  // ================================================================
   btnImprimirComandaCaja.addEventListener('click', () => {
     if (pedidoActual.length === 0) {
       alert('No hay productos en el pedido actual para imprimir.');
@@ -1178,9 +1122,6 @@
     abrirModalImpresion(pedidoTemp, productosOrdenados);
   });
 
-  // ================================================================
-  // 🔥 ENVIAR A COCINA (CON IMPRESIÓN AUTOMÁTICA)
-  // ================================================================
   btnEnviar.addEventListener('click', async () => {
     if (pedidoActual.length === 0) {
       alert('Agrega productos al pedido.');
@@ -1232,9 +1173,6 @@
     }
   });
 
-  // ================================================================
-  // IMPRIMIR TICKET (CLIENTE)
-  // ================================================================
   btnImprimir.addEventListener('click', () => {
     if (pedidoActual.length === 0) {
       alert('No hay productos en el pedido actual.');
@@ -1242,7 +1180,7 @@
     }
     const total = pedidoActual.reduce((sum, p) => sum + p.precio, 0);
     const fecha = new Date().toLocaleString();
-    let contenido = `<h1 style="text-align:center;">🧇 MasQueWaffles</h1><p style="text-align:center;">${fecha}</p><hr><ul>`;
+    let contenido = `<h1 style="text-align:center;">🧇 WingerMan</h1><p style="text-align:center;">${fecha}</p><hr><ul>`;
     pedidoActual.forEach(p => { contenido += `<li>${p.nombre} - $${p.precio}</li>`; });
     contenido += `</ul><hr><p><strong>Total: $${total.toFixed(2)}</strong></p><p style="text-align:center; margin-top:20px;">¡Gracias por su compra!</p>`;
     const ventana = window.open('', '_blank');
@@ -1251,9 +1189,6 @@
     ventana.print();
   });
 
-  // ================================================================
-  // GENERAR EXCEL
-  // ================================================================
   btnExcel.addEventListener('click', async () => {
     const pedidos = await getPedidosTurno();
     const pedidosEntregados = pedidos.filter(p => p.entregado === true);
@@ -1289,12 +1224,9 @@
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(data);
     XLSX.utils.book_append_sheet(wb, ws, 'Entregados');
-    XLSX.writeFile(wb, `MasQueWaffles_Entregados_Turno${turnoActual}.xlsx`);
+    XLSX.writeFile(wb, `WingerMan_Entregados_Turno${turnoActual}.xlsx`);
   });
 
-  // ================================================================
-  // CERRAR TURNO
-  // ================================================================
   btnCerrar.addEventListener('click', async () => {
     const confirmar = confirm('¿Cerrar turno? Se eliminarán todos los pedidos y se reiniciará el contador.');
     if (!confirmar) return;
@@ -1314,9 +1246,6 @@
     }
   });
 
-  // ================================================================
-  // PEDIDOS EN CURSO (TIEMPO REAL)
-  // ================================================================
   function iniciarEscuchaPedidos() {
     const q = query(collection(db, 'pedidos'), orderBy('fechaHora', 'desc'));
     pedidosListener = onSnapshot(q, (snapshot) => {
@@ -1335,9 +1264,6 @@
     });
   }
 
-  // ================================================================
-  // RENDER PEDIDOS EN CURSO CON BOTÓN DE IMPRESIÓN
-  // ================================================================
   function renderPedidosEnCurso() {
     if (pedidosCache.length === 0) {
       pedidosEnCursoDiv.innerHTML = '<p style="color:#888;">No hay pedidos en curso.</p>';
@@ -1378,7 +1304,6 @@
         div.appendChild(notaDiv);
       }
 
-      // 🟢 BOTÓN DE IMPRESIÓN DE COMANDA PARA CADA PEDIDO
       const btnImprimirPedido = document.createElement('button');
       btnImprimirPedido.className = 'btn-imprimir-comanda-pedido';
       btnImprimirPedido.textContent = '🖨️ Imprimir comanda';
@@ -1440,9 +1365,6 @@
     });
   }
 
-  // ================================================================
-  // RESUMEN DEL TURNO
-  // ================================================================
   async function actualizarResumenTurno() {
     const pedidos = await getPedidosTurno();
     let totalProductos = 0;
@@ -1473,16 +1395,10 @@
     detallePedidosTurnoDiv.innerHTML = detalleHTML;
   }
 
-  // ================================================================
-  // UI TURNO
-  // ================================================================
   function actualizarTurnoUI() {
     turnoNumSpan.textContent = turnoActual;
   }
 
-  // ================================================================
-  // INICIALIZACIÓN
-  // ================================================================
   signInAnonymously(auth)
     .then(() => {
       console.log('✅ Conectado a Firebase (Caja)');
