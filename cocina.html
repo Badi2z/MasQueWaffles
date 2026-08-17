@@ -180,18 +180,22 @@
   const auth = getAuth(app);
 
   function limpiarTexto(texto) {
+    if (!texto) return '';
     const mapa = {
       'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
       'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U',
       'ñ': 'n', 'Ñ': 'N',
       'ä': 'a', 'ë': 'e', 'ï': 'i', 'ö': 'o', 'ü': 'u',
-      'Ä': 'A', 'Ë': 'E', 'Ï': 'I', 'Ö': 'O', 'Ü': 'U'
+      'Ä': 'A', 'Ë': 'E', 'Ï': 'I', 'Ö': 'O', 'Ü': 'U',
+      'à': 'a', 'è': 'e', 'ì': 'i', 'ò': 'o', 'ù': 'u',
+      'À': 'A', 'È': 'E', 'Ì': 'I', 'Ò': 'O', 'Ù': 'U'
     };
     let limpio = texto;
     for (let [original, reemplazo] of Object.entries(mapa)) {
       limpio = limpio.replace(new RegExp(original, 'g'), reemplazo);
     }
     limpio = limpio.replace(/[^a-zA-Z0-9\s\-+]/g, '');
+    limpio = limpio.replace(/\s+/g, ' ');
     return limpio.trim();
   }
 
@@ -260,7 +264,7 @@
     };
 
     function getGrupo(nombre) {
-      const n = nombre.toUpperCase();
+      const n = (nombre || '').toUpperCase();
       if (n.includes('CREPA')) return 'CREPAS';
       if (n.includes('ALITA')) return 'ALITAS';
       if (n.includes('BONELESS')) return 'BONELESS';
@@ -282,13 +286,10 @@
       const ordenA = ordenGrupos[grupoA] || 999;
       const ordenB = ordenGrupos[grupoB] || 999;
       if (ordenA !== ordenB) return ordenA - ordenB;
-      return a.nombre.localeCompare(b.nombre);
+      return (a.nombre || '').localeCompare(b.nombre || '');
     });
   }
 
-  // ================================================================
-  // 📋 GENERAR TEXTO COMANDA - ANCHO 46 (76mm útiles)
-  // ================================================================
   function generarTextoComanda(ped, productosOrdenados) {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -346,7 +347,7 @@
     texto += ' PRODUCTOS (' + productosOrdenados.length + ')\n';
     
     productosOrdenados.forEach((prod, index) => {
-      const nombreProducto = prod.nombre;
+      const nombreProducto = prod.nombre || '';
       const nombreLimpio = limpiarTexto(nombreProducto);
       
       const maxLenNombre = ANCHO - 6;
@@ -485,7 +486,7 @@
     printEntries.push({ type: 0, content: 'PRODUCTOS (' + productosOrdenados.length + ')', bold: 0, align: 0, format: 0 });
 
     productosOrdenados.forEach((prod, index) => {
-      const nombreLimpio = limpiarTexto(prod.nombre);
+      const nombreLimpio = limpiarTexto(prod.nombre || '');
       printEntries.push({ type: 0, content: '  1X ' + nombreLimpio, bold: 0, align: 0, format: 0 });
       if (prod.nota) {
         printEntries.push({ type: 0, content: '     Nota: ' + prod.nota, bold: 0, align: 0, format: 0 });

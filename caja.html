@@ -298,22 +298,34 @@
   const db = getFirestore(app);
   const auth = getAuth(app);
 
+  // ================================================================
+  // 🔧 FUNCIÓN MEJORADA PARA LIMPIAR CARACTERES ESPECIALES
+  // ================================================================
   function limpiarTexto(texto) {
+    if (!texto) return '';
     const mapa = {
       'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
       'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U',
       'ñ': 'n', 'Ñ': 'N',
       'ä': 'a', 'ë': 'e', 'ï': 'i', 'ö': 'o', 'ü': 'u',
-      'Ä': 'A', 'Ë': 'E', 'Ï': 'I', 'Ö': 'O', 'Ü': 'U'
+      'Ä': 'A', 'Ë': 'E', 'Ï': 'I', 'Ö': 'O', 'Ü': 'U',
+      'à': 'a', 'è': 'e', 'ì': 'i', 'ò': 'o', 'ù': 'u',
+      'À': 'A', 'È': 'E', 'Ì': 'I', 'Ò': 'O', 'Ù': 'U'
     };
     let limpio = texto;
     for (let [original, reemplazo] of Object.entries(mapa)) {
       limpio = limpio.replace(new RegExp(original, 'g'), reemplazo);
     }
+    // Limpiar caracteres especiales pero mantener letras, números, espacios, guiones, signos +
     limpio = limpio.replace(/[^a-zA-Z0-9\s\-+]/g, '');
+    // Eliminar espacios múltiples
+    limpio = limpio.replace(/\s+/g, ' ');
     return limpio.trim();
   }
 
+  // ================================================================
+  // PRODUCTOS (con nombres ya limpiados de fábrica)
+  // ================================================================
   const PAPAS_EXTRA = { nombre: 'Papas Extra', precio: 17, ingredientes: '130 gramos de papa.' };
   const categorias = [
     { id: 'alitas', nombre: 'ALITAS', emoji: '🍗', permitePapas: true, grupos: [
@@ -806,14 +818,13 @@
   }
 
   // ================================================================
-  // 📋 GENERAR TEXTO COMANDA - ANCHO 46 (76mm útiles)
+  // 📋 GENERAR TEXTO COMANDA CORREGIDO
   // ================================================================
   function generarTextoComanda(ped, productosOrdenados) {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    // 46 caracteres = 76mm (80mm - 2mm izquierda - 2mm derecha)
     const ANCHO = 46;
     
     function centrar(t) {
@@ -855,7 +866,6 @@
 
     let texto = '';
     
-    // Margen superior: 1 línea
     texto += '\n';
     
     texto += '='.repeat(ANCHO) + '\n';
@@ -867,7 +877,7 @@
     texto += ' PRODUCTOS (' + productosOrdenados.length + ')\n';
     
     productosOrdenados.forEach((prod, index) => {
-      const nombreProducto = prod.nombre;
+      const nombreProducto = prod.nombre || '';
       const nombreLimpio = limpiarTexto(nombreProducto);
       
       const maxLenNombre = ANCHO - 6;
@@ -888,7 +898,6 @@
         });
       }
       
-      // Espacio entre productos: 0.5 líneas
       if (index < productosOrdenados.length - 1) {
         texto += ' \n';
       }
@@ -908,7 +917,6 @@
     texto += centrar(fecha) + '\n';
     texto += '='.repeat(ANCHO) + '\n';
     
-    // Margen inferior: 1 línea
     texto += '\n';
 
     return texto;
@@ -1008,7 +1016,7 @@
     printEntries.push({ type: 0, content: 'PRODUCTOS (' + productosOrdenados.length + ')', bold: 0, align: 0, format: 0 });
 
     productosOrdenados.forEach((prod, index) => {
-      const nombreLimpio = limpiarTexto(prod.nombre);
+      const nombreLimpio = limpiarTexto(prod.nombre || '');
       printEntries.push({ type: 0, content: '  1X ' + nombreLimpio, bold: 0, align: 0, format: 0 });
       if (prod.nota) {
         printEntries.push({ type: 0, content: '     Nota: ' + prod.nota, bold: 0, align: 0, format: 0 });
