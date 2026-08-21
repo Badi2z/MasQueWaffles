@@ -179,6 +179,12 @@
   const db = getFirestore(app);
   const auth = getAuth(app);
 
+  // ================================================================
+  // CONFIGURACIÓN
+  // ================================================================
+  let configImpresion = { ancho: 44, margen: 2, fuente: 10, copias: 2, corte: true };
+  let configGeneral = { nombreNegocio: 'WingerMan', limiteTurno: 50, sonido: true, pieTicket: '¡Gracias por su compra!' };
+
   function limpiarTexto(texto) {
     if (!texto) return '';
     const mapa = {
@@ -221,6 +227,30 @@
   let caracteristicaBT = null;
   let servidorBT = null;
 
+  // ================================================================
+  // CARGAR CONFIGURACIÓN
+  // ================================================================
+  async function cargarConfiguracion() {
+    try {
+      const docRef = doc(db, 'config', 'sistema');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.impresion) configImpresion = { ...configImpresion, ...data.impresion };
+        if (data.general) configGeneral = { ...configGeneral, ...data.general };
+      }
+    } catch (e) {
+      console.log('⚠️ No se pudo cargar configuración, usando defaults');
+    }
+    document.querySelector('.header h1').textContent = '🍳 ' + (configGeneral.nombreNegocio || 'WingerMan');
+    sonidoActivado = configGeneral.sonido !== false;
+    btnActivarSonido.textContent = sonidoActivado ? '🔊 Sonido activado ✅' : '🔇 Sonido desactivado ❌';
+    btnActivarSonido.className = sonidoActivado ? 'btn-sonido activo' : 'btn-sonido inactivo';
+  }
+
+  // ================================================================
+  // SONIDO
+  // ================================================================
   function reproducirSonido() {
     if (!sonidoActivado) return;
     try {
@@ -256,6 +286,9 @@
     }
   });
 
+  // ================================================================
+  // ORDENAR PRODUCTOS
+  // ================================================================
   function ordenarProductos(productos) {
     const ordenGrupos = {
       'CREPAS': 1, 'ALITAS': 2, 'BONELESS': 3, 'HAMBURGUESAS': 4,
@@ -290,21 +323,26 @@
     });
   }
 
+  // ================================================================
+  // GENERAR COMANDA
+  // ================================================================
   function generarTextoComanda(ped, productosOrdenados) {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    const ANCHO = 46;
+    const ANCHO = configImpresion.ancho || 44;
+    const margenChars = Math.round((configImpresion.margen || 2) * 0.25);
     
     function centrar(t) {
       const espacios = Math.max(0, Math.floor((ANCHO - t.length) / 2));
-      return ' '.repeat(espacios) + t;
+      return ' '.repeat(espacios + margenChars) + t;
     }
 
     function linea(t) {
-      if (t.length > ANCHO) return t.substring(0, ANCHO);
-      return t.padEnd(ANCHO, ' ');
+      const maxLen = ANCHO - margenChars;
+      if (t.length > maxLen) return t.substring(0, maxLen);
+      return ' '.repeat(margenChars) + t.padEnd(maxLen, ' ');
     }
 
     function dividirTexto(texto, maxLen) {
@@ -313,7 +351,7 @@
       let lineaActual = '';
       
       for (let palabra of palabras) {
-        while (palabra.length > maxLen) {
+        if (palabra.length > maxLen) {
           if (lineaActual) {
             lineas.push(lineaActual);
             lineaActual = '';
@@ -322,7 +360,6 @@
           lineas.push(parte);
           palabra = palabra.substring(maxLen);
         }
-        
         if ((lineaActual + ' ' + palabra).length <= maxLen) {
           lineaActual += (lineaActual ? ' ' : '') + palabra;
         } else {
@@ -337,20 +374,22 @@
     let texto = '';
     
     texto += '\n';
+    const nombreNegocio = configGeneral.nombreNegocio || 'WingerMan';
     
     texto += '='.repeat(ANCHO) + '\n';
-    texto += centrar('WingerMan') + '\n';
+    texto += centrar(nombreNegocio) + '\n';
     texto += centrar('Comanda') + '\n';
     texto += '='.repeat(ANCHO) + '\n';
     texto += linea('Pedido #' + ped.numeroPedido + '   ' + hora) + '\n';
     texto += '-'.repeat(ANCHO) + '\n';
     texto += ' PRODUCTOS (' + productosOrdenados.length + ')\n';
+    texto += '\n';
     
     productosOrdenados.forEach((prod, index) => {
       const nombreProducto = prod.nombre || '';
       const nombreLimpio = limpiarTexto(nombreProducto);
       
-      const maxLenNombre = ANCHO - 6;
+      const maxLenNombre = ANCHO - 8;
       const lineasNombre = dividirTexto(nombreLimpio, maxLenNombre);
       
       lineasNombre.forEach((linea, idx) => {
@@ -362,26 +401,23 @@
       });
       
       if (prod.nota) {
-        const lineasNota = dividirTexto('     Nota: ' + prod.nota, ANCHO - 4);
+        const lineasNota = dividirTexto('   Nota: ' + prod.nota, ANCHO - 6);
         lineasNota.forEach(linea => {
           texto += '     ' + linea + '\n';
         });
       }
       
-      if (index < productosOrdenados.length - 1) {
-        texto += ' \n';
-      }
+      texto += '\n';
     });
 
     if (ped.notaPedido) {
-      texto += '\n';
-      const lineasNota = dividirTexto('Nota del pedido: ' + ped.notaPedido, ANCHO - 2);
+      const lineasNota = dividirTexto('Nota: ' + ped.notaPedido, ANCHO - 4);
       lineasNota.forEach(linea => {
         texto += '  ' + linea + '\n';
       });
+      texto += '\n';
     }
 
-    texto += '\n';
     texto += '-'.repeat(ANCHO) + '\n';
     texto += linea('Total: $' + ped.total.toFixed(2)) + '\n';
     texto += centrar(fecha) + '\n';
@@ -392,6 +428,9 @@
     return texto;
   }
 
+  // ================================================================
+  // BLUETOOTH
+  // ================================================================
   async function conectarBluetooth() {
     try {
       if (dispositivoBT) {
@@ -433,6 +472,9 @@
     }
   }
 
+  // ================================================================
+  // IMPRESIÓN
+  // ================================================================
   function imprimirPC(ped, productosOrdenados) {
     const texto = generarTextoComanda(ped, productosOrdenados);
     const ventana = window.open('', '_blank', 'width=480,height=600');
@@ -449,7 +491,7 @@
             padding: 0;
             margin: 0;
             white-space: pre-wrap;
-            font-size: 10pt;
+            font-size: ${configImpresion.fuente || 10}pt;
             max-width: 80mm;
           }
           @media print { body { padding: 0; margin: 0; } .no-print { display: none; } }
@@ -479,11 +521,13 @@
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
     let printEntries = [];
-    printEntries.push({ type: 0, content: 'WingerMan', bold: 1, align: 1, format: 1 });
+    const nombreNegocio = configGeneral.nombreNegocio || 'WingerMan';
+    printEntries.push({ type: 0, content: nombreNegocio, bold: 1, align: 1, format: 1 });
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: 'Pedido #' + ped.numeroPedido + '  ' + hora, bold: 1, align: 0, format: 0 });
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: 'PRODUCTOS (' + productosOrdenados.length + ')', bold: 0, align: 0, format: 0 });
+    printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
 
     productosOrdenados.forEach((prod, index) => {
       const nombreLimpio = limpiarTexto(prod.nombre || '');
@@ -491,17 +535,14 @@
       if (prod.nota) {
         printEntries.push({ type: 0, content: '     Nota: ' + prod.nota, bold: 0, align: 0, format: 0 });
       }
-      if (index < productosOrdenados.length - 1) {
-        printEntries.push({ type: 0, content: ' ', bold: 0, align: 0, format: 0 });
-      }
+      printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
     });
 
     if (ped.notaPedido) {
-      printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
       printEntries.push({ type: 0, content: 'Nota: ' + ped.notaPedido, bold: 0, align: 0, format: 0 });
+      printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
     }
 
-    printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: 'Total: $' + ped.total.toFixed(2), bold: 1, align: 1, format: 1 });
     printEntries.push({ type: 0, content: fecha, bold: 0, align: 1, format: 0 });
@@ -543,7 +584,18 @@
       }
 
       const encoder = new TextEncoder();
-      const textoCompleto = texto + '\n';
+      let textoCompleto = texto + '\n';
+      
+      const copias = configImpresion.copias || 2;
+      for (let c = 0; c < copias; c++) {
+        if (c > 0) {
+          if (configImpresion.corte) {
+            textoCompleto += '\x1B\x69';
+          }
+          textoCompleto += '\n\n';
+        }
+        textoCompleto += texto + '\n';
+      }
       
       const chunkSize = 200;
       for (let i = 0; i < textoCompleto.length; i += chunkSize) {
@@ -613,6 +665,9 @@
     }
   });
 
+  // ================================================================
+  // TURNO Y ESCUCHA
+  // ================================================================
   async function getTurno() {
     try {
       const docRef = doc(db, 'config', 'turnoActual');
@@ -655,6 +710,9 @@
     });
   }
 
+  // ================================================================
+  // RENDER PEDIDOS
+  // ================================================================
   function renderPedidos() {
     if (pedidosCache.length === 0) {
       pedidosContainer.innerHTML = '<div class="sin-pedidos">No hay pedidos activos</div>';
@@ -770,6 +828,9 @@
     });
   }
 
+  // ================================================================
+  // BOTÓN IMPRIMIR COMANDAS
+  // ================================================================
   btnImprimirComanda.addEventListener('click', () => {
     const pedidosEnPreparacion = pedidosCache.filter(p => p.estadoPedido === 'en_preparacion' || p.estadoPedido === 'listo');
     if (pedidosEnPreparacion.length === 0) {
@@ -782,6 +843,9 @@
     abrirModalImpresion(ped, productosOrdenados);
   });
 
+  // ================================================================
+  // INICIALIZACIÓN
+  // ================================================================
   signInAnonymously(auth)
     .then(() => {
       console.log('✅ Conectado a Firebase (Cocina)');
@@ -793,6 +857,7 @@
     });
 
   async function iniciarApp() {
+    await cargarConfiguracion();
     await getTurno();
     iniciarEscucha();
   }
