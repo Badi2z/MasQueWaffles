@@ -420,7 +420,7 @@
     for (let [original, reemplazo] of Object.entries(mapa)) {
       limpio = limpio.replace(new RegExp(original, 'g'), reemplazo);
     }
-    // IMPORTANTE: NO eliminar la 'l' minúscula, solo caracteres no permitidos
+    // Mantener letras, números, espacios, guiones, signos + y puntos
     limpio = limpio.replace(/[^a-zA-Z0-9\s\-+.]/g, '');
     limpio = limpio.replace(/\s+/g, ' ');
     return limpio.trim();
@@ -1003,7 +1003,7 @@
   }
 
   // ================================================================
-  // GENERAR TEXTO COMANDA (1 COPIA + MARGEN DE CORTE)
+  // GENERAR TEXTO COMANDA (1 SOLA COPIA)
   // ================================================================
   function generarTextoComanda(ped, productosOrdenados) {
     const ahora = new Date();
@@ -1261,6 +1261,9 @@
     }, 3000);
   }
 
+  // ================================================================
+  // 🔥 IMPRESIÓN ANDROID - 1 SOLA COPIA (CORREGIDO)
+  // ================================================================
   async function imprimirAndroid(ped, productosOrdenados) {
     const texto = generarTextoComanda(ped, productosOrdenados);
 
@@ -1286,7 +1289,7 @@
       }
 
       const encoder = new TextEncoder();
-      // Solo 1 copia
+      // ✅ SOLO 1 COPIA - NO HAY BUCLE
       const textoCompleto = texto;
       
       const chunkSize = 200;

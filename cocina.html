@@ -571,6 +571,9 @@
     }, 3000);
   }
 
+  // ================================================================
+  // 🔥 IMPRESIÓN ANDROID - 1 SOLA COPIA (CORREGIDO)
+  // ================================================================
   async function imprimirAndroid(ped, productosOrdenados) {
     const texto = generarTextoComanda(ped, productosOrdenados);
 
@@ -596,6 +599,7 @@
       }
 
       const encoder = new TextEncoder();
+      // ✅ SOLO 1 COPIA - NO HAY BUCLE
       const textoCompleto = texto;
       
       const chunkSize = 200;
