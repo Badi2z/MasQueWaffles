@@ -15,7 +15,7 @@
   </script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #121212; color: #fff; padding: 16px; max-width: 1000px; margin: 0 auto; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #121212; color: #fff; padding: 16px; max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; min-height: 100vh; }
     .header { background: #da291c; padding: 20px; border-radius: 30px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); flex-wrap: wrap; gap: 12px; }
     .header h1 { font-size: 2rem; letter-spacing: 2px; }
     .header .turno { background: #ffc72c; color: #1c1c1e; padding: 8px 20px; border-radius: 40px; font-weight: bold; font-size: 1.2rem; }
@@ -35,7 +35,7 @@
     .btn-sonido:active { transform: scale(0.96); }
     .btn-sonido.activo { background: #4caf50; }
     .btn-sonido.inactivo { background: #f44336; }
-    .pedido-container { display: flex; flex-direction: column; gap: 20px; }
+    .pedido-container { display: flex; flex-direction: column; gap: 20px; flex: 1; }
     .pedido-card { background: #1e1e1e; border-radius: 30px; padding: 20px; border-left: 10px solid #da291c; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
     .pedido-card.listo { border-left-color: #4caf50; background: #1e2a1e; }
     .pedido-card .cabecera { display: flex; justify-content: space-between; align-items: center; font-size: 1.6rem; font-weight: bold; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
@@ -123,6 +123,22 @@
     .modal .opcion.pc { border-color: #2196f3; }
     .modal .opcion.ios { border-color: #0084FF; }
     .modal .opcion.android { border-color: #4caf50; }
+    /* Footer */
+    .footer {
+      margin-top: 30px;
+      padding: 16px 20px;
+      background: #1a1a1a;
+      color: #888;
+      border-radius: 20px;
+      text-align: center;
+      font-size: 0.8rem;
+      line-height: 1.6;
+      border-top: 2px solid #da291c;
+    }
+    .footer .dev { color: #ffc72c; font-weight: 600; }
+    .footer .prop { color: #da291c; font-weight: 600; }
+    .footer .ubicacion { color: #aaa; }
+    .footer .version { color: #666; font-size: 0.7rem; }
     @media (max-width: 600px) {
       .pedido-card .cabecera { font-size: 1.2rem; }
       .pedido-card .producto .nombre { font-size: 1.2rem; }
@@ -161,6 +177,24 @@
   </div>
 </div>
 
+<!-- ============================================================ -->
+<!-- FOOTER - DERECHOS RESERVADOS -->
+<!-- ============================================================ -->
+<div class="footer">
+  <div>
+    <span class="prop">WingerMan</span> &copy; 2026 - Todos los derechos reservados.
+  </div>
+  <div>
+    <span class="dev">Desarrollado por: Everardo Ángeles Martínez</span>
+  </div>
+  <div class="ubicacion">
+    La Concepción de los Baños, Ixtlahuaca, México.
+  </div>
+  <div class="version">
+    Versión 2.0 | Sistema de Punto de Venta
+  </div>
+</div>
+
 <script type="module">
   const firebaseConfig = {
     apiKey: "AIzaSyAtUbhUZW9qZlpueY3JrYXgnkcXfHYdUc0",
@@ -180,10 +214,11 @@
   const auth = getAuth(app);
 
   // ================================================================
-  // CONFIGURACIÓN
+  // CONFIGURACIÓN FIJA
   // ================================================================
+  const NOMBRE_NEGOCIO = 'WingerMan';
   let configImpresion = { ancho: 44, margen: 2, fuente: 10, copias: 2, corte: true };
-  let configGeneral = { nombreNegocio: 'WingerMan', limiteTurno: 50, sonido: true, pieTicket: '¡Gracias por su compra!' };
+  let configGeneral = { nombreNegocio: NOMBRE_NEGOCIO, limiteTurno: 50, sonido: true, pieTicket: '¡Gracias por su compra!' };
 
   function limpiarTexto(texto) {
     if (!texto) return '';
@@ -227,9 +262,6 @@
   let caracteristicaBT = null;
   let servidorBT = null;
 
-  // ================================================================
-  // CARGAR CONFIGURACIÓN
-  // ================================================================
   async function cargarConfiguracion() {
     try {
       const docRef = doc(db, 'config', 'sistema');
@@ -242,15 +274,11 @@
     } catch (e) {
       console.log('⚠️ No se pudo cargar configuración, usando defaults');
     }
-    document.querySelector('.header h1').textContent = '🍳 ' + (configGeneral.nombreNegocio || 'WingerMan');
     sonidoActivado = configGeneral.sonido !== false;
     btnActivarSonido.textContent = sonidoActivado ? '🔊 Sonido activado ✅' : '🔇 Sonido desactivado ❌';
     btnActivarSonido.className = sonidoActivado ? 'btn-sonido activo' : 'btn-sonido inactivo';
   }
 
-  // ================================================================
-  // SONIDO
-  // ================================================================
   function reproducirSonido() {
     if (!sonidoActivado) return;
     try {
@@ -286,9 +314,6 @@
     }
   });
 
-  // ================================================================
-  // ORDENAR PRODUCTOS
-  // ================================================================
   function ordenarProductos(productos) {
     const ordenGrupos = {
       'CREPAS': 1, 'ALITAS': 2, 'BONELESS': 3, 'HAMBURGUESAS': 4,
@@ -323,9 +348,6 @@
     });
   }
 
-  // ================================================================
-  // GENERAR COMANDA
-  // ================================================================
   function generarTextoComanda(ped, productosOrdenados) {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -374,10 +396,9 @@
     let texto = '';
     
     texto += '\n';
-    const nombreNegocio = configGeneral.nombreNegocio || 'WingerMan';
     
     texto += '='.repeat(ANCHO) + '\n';
-    texto += centrar(nombreNegocio) + '\n';
+    texto += centrar(NOMBRE_NEGOCIO) + '\n';
     texto += centrar('Comanda') + '\n';
     texto += '='.repeat(ANCHO) + '\n';
     texto += linea('Pedido #' + ped.numeroPedido + '   ' + hora) + '\n';
@@ -428,9 +449,6 @@
     return texto;
   }
 
-  // ================================================================
-  // BLUETOOTH
-  // ================================================================
   async function conectarBluetooth() {
     try {
       if (dispositivoBT) {
@@ -472,9 +490,6 @@
     }
   }
 
-  // ================================================================
-  // IMPRESIÓN
-  // ================================================================
   function imprimirPC(ped, productosOrdenados) {
     const texto = generarTextoComanda(ped, productosOrdenados);
     const ventana = window.open('', '_blank', 'width=480,height=600');
@@ -521,8 +536,7 @@
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
     let printEntries = [];
-    const nombreNegocio = configGeneral.nombreNegocio || 'WingerMan';
-    printEntries.push({ type: 0, content: nombreNegocio, bold: 1, align: 1, format: 1 });
+    printEntries.push({ type: 0, content: NOMBRE_NEGOCIO, bold: 1, align: 1, format: 1 });
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: 'Pedido #' + ped.numeroPedido + '  ' + hora, bold: 1, align: 0, format: 0 });
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
@@ -665,9 +679,6 @@
     }
   });
 
-  // ================================================================
-  // TURNO Y ESCUCHA
-  // ================================================================
   async function getTurno() {
     try {
       const docRef = doc(db, 'config', 'turnoActual');
@@ -710,9 +721,6 @@
     });
   }
 
-  // ================================================================
-  // RENDER PEDIDOS
-  // ================================================================
   function renderPedidos() {
     if (pedidosCache.length === 0) {
       pedidosContainer.innerHTML = '<div class="sin-pedidos">No hay pedidos activos</div>';
@@ -828,9 +836,6 @@
     });
   }
 
-  // ================================================================
-  // BOTÓN IMPRIMIR COMANDAS
-  // ================================================================
   btnImprimirComanda.addEventListener('click', () => {
     const pedidosEnPreparacion = pedidosCache.filter(p => p.estadoPedido === 'en_preparacion' || p.estadoPedido === 'listo');
     if (pedidosEnPreparacion.length === 0) {
@@ -843,9 +848,6 @@
     abrirModalImpresion(ped, productosOrdenados);
   });
 
-  // ================================================================
-  // INICIALIZACIÓN
-  // ================================================================
   signInAnonymously(auth)
     .then(() => {
       console.log('✅ Conectado a Firebase (Cocina)');

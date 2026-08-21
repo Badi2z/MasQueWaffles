@@ -16,14 +16,14 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f5f5f5; color: #1c1c1e; padding: 12px; max-width: 1200px; margin: 0 auto; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f5f5f5; color: #1c1c1e; padding: 12px; max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; min-height: 100vh; }
     .header { background: #da291c; color: white; padding: 16px 20px; border-radius: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); flex-wrap: wrap; gap: 8px; }
     .header h1 { font-size: 1.8rem; letter-spacing: 1px; }
     .header h1 span { font-weight: 300; }
     .header .turno { background: #ffc72c; color: #1c1c1e; padding: 6px 14px; border-radius: 30px; font-weight: bold; font-size: 1rem; }
     .header .btn-config { background: #ffc72c; color: #1c1c1e; border: none; padding: 8px 16px; border-radius: 30px; font-weight: bold; font-size: 0.9rem; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     .header .btn-config:active { transform: scale(0.95); }
-    .main-container { display: flex; gap: 20px; flex-wrap: wrap; }
+    .main-container { display: flex; gap: 20px; flex-wrap: wrap; flex: 1; }
     .col-izquierda { flex: 2; min-width: 300px; }
     .col-derecha { flex: 1.2; min-width: 280px; display: flex; flex-direction: column; gap: 16px; }
     .grid-categorias { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
@@ -240,6 +240,22 @@
     .config-panel .producto-item .btn-editar { background: #2196f3; color: white; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; }
     .config-panel .producto-item .btn-editar:active { transform: scale(0.95); }
     .config-panel .grupo-item { padding-left: 16px; border-left: 3px solid #da291c; margin-bottom: 8px; }
+    /* Footer */
+    .footer {
+      margin-top: 30px;
+      padding: 16px 20px;
+      background: #1a1a1a;
+      color: #888;
+      border-radius: 20px;
+      text-align: center;
+      font-size: 0.8rem;
+      line-height: 1.6;
+      border-top: 2px solid #da291c;
+    }
+    .footer .dev { color: #ffc72c; font-weight: 600; }
+    .footer .prop { color: #da291c; font-weight: 600; }
+    .footer .ubicacion { color: #aaa; }
+    .footer .version { color: #666; font-size: 0.7rem; }
     @media (max-width: 768px) {
       .col-izquierda, .col-derecha { flex: 1 0 100%; }
       .grid-categorias { grid-template-columns: repeat(2, 1fr); }
@@ -296,7 +312,6 @@
     <div class="config-tabs">
       <button class="tab active" data-tab="productos">📝 Productos</button>
       <button class="tab" data-tab="impresion">🖨️ Impresión</button>
-      <button class="tab" data-tab="general">🔧 General</button>
     </div>
     <div id="tabProductos" class="config-panel active">
       <p style="color:#888;font-size:0.9rem;">Edita precios, nombres e ingredientes de los productos.</p>
@@ -318,18 +333,6 @@
       <label>Vista previa:</label>
       <div class="preview-box" id="vistaPrevia">Ajusta los parámetros para ver la vista previa...</div>
       <button class="btn-guardar" id="btnGuardarImpresion">💾 Guardar configuración de impresión</button>
-    </div>
-    <div id="tabGeneral" class="config-panel">
-      <p style="color:#888;font-size:0.9rem;">Configuración general del sistema.</p>
-      <label>Nombre del negocio:</label>
-      <input type="text" id="inputNombreNegocio" value="WingerMan">
-      <label>Límite de pedidos por turno:</label>
-      <input type="number" id="inputLimiteTurno" value="50" min="10" max="200">
-      <label>Sonido de notificación:</label>
-      <select id="selectSonido"><option value="true">🔊 Activado</option><option value="false">🔇 Desactivado</option></select>
-      <label>Pie de ticket:</label>
-      <input type="text" id="inputPieTicket" value="¡Gracias por su compra!">
-      <button class="btn-guardar" id="btnGuardarGeneral">💾 Guardar configuración general</button>
     </div>
   </div>
 </div>
@@ -357,6 +360,24 @@
   </div>
 </div>
 
+<!-- ============================================================ -->
+<!-- FOOTER - DERECHOS RESERVADOS -->
+<!-- ============================================================ -->
+<div class="footer">
+  <div>
+    <span class="prop">WingerMan</span> &copy; 2026 - Todos los derechos reservados.
+  </div>
+  <div>
+    <span class="dev">Desarrollado por: Everardo Ángeles Martínez</span>
+  </div>
+  <div class="ubicacion">
+    La Concepción de los Baños, Ixtlahuaca, México.
+  </div>
+  <div class="version">
+    Versión 2.0 | Sistema de Punto de Venta
+  </div>
+</div>
+
 <script type="module">
   const firebaseConfig = {
     apiKey: "AIzaSyAtUbhUZW9qZlpueY3JrYXgnkcXfHYdUc0",
@@ -376,10 +397,19 @@
   const auth = getAuth(app);
 
   // ================================================================
-  // CONFIGURACIÓN POR DEFECTO
+  // CONFIGURACIÓN POR DEFECTO (FIJA - NO EDITABLE POR INTERFAZ)
   // ================================================================
+  const NOMBRE_NEGOCIO = 'WingerMan';
+  const LIMITE_TURNO = 50;
+  const PIE_TICKET = '¡Gracias por su compra!';
+
   let configImpresion = { ancho: 44, margen: 2, fuente: 10, copias: 2, corte: true };
-  let configGeneral = { nombreNegocio: 'WingerMan', limiteTurno: 50, sonido: true, pieTicket: '¡Gracias por su compra!' };
+  let configGeneral = { 
+    nombreNegocio: NOMBRE_NEGOCIO, 
+    limiteTurno: LIMITE_TURNO, 
+    sonido: true, 
+    pieTicket: PIE_TICKET 
+  };
 
   // ================================================================
   // FUNCIÓN PARA LIMPIAR CARACTERES ESPECIALES
@@ -405,7 +435,7 @@
   }
 
   // ================================================================
-  // PRODUCTOS BASE (AHORA CON PHILADELPHIA +$5)
+  // PRODUCTOS BASE
   // ================================================================
   const PAPAS_EXTRA = { nombre: 'Papas Extra', precio: 17, ingredientes: '130 gramos de papa.' };
   const categoriasBase = [
@@ -598,8 +628,7 @@
     let nuevoContador = (data.contador || 0) + 1;
     let turnoActualTemp = data.turno || 1;
 
-    const limite = configGeneral.limiteTurno || 50;
-    if (nuevoContador > limite) {
+    if (nuevoContador > LIMITE_TURNO) {
       let nuevoTurno = turnoActualTemp + 1;
       if (nuevoTurno > 4) {
         nuevoTurno = 1;
@@ -656,7 +685,7 @@
   }
 
   // ================================================================
-  // CARGAR CONFIGURACIÓN DESDE FIREBASE
+  // CARGAR CONFIGURACIÓN DESDE FIREBASE (SOLO IMPRESIÓN)
   // ================================================================
   async function cargarConfiguracion() {
     try {
@@ -665,19 +694,17 @@
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data.impresion) configImpresion = { ...configImpresion, ...data.impresion };
-        if (data.general) configGeneral = { ...configGeneral, ...data.general };
         if (data.productos) {
-          // Cargar productos personalizados
           const prodData = data.productos;
           if (prodData && Object.keys(prodData).length > 0) {
             categorias = Object.values(prodData);
           }
         }
-        aplicarConfiguracionUI();
       }
     } catch (e) {
       console.log('⚠️ No se pudo cargar configuración, usando defaults');
     }
+    aplicarConfiguracionUI();
   }
 
   async function guardarConfiguracion(seccion, datos) {
@@ -694,7 +721,6 @@
   }
 
   function aplicarConfiguracionUI() {
-    // Impresión
     document.getElementById('sliderAncho').value = configImpresion.ancho || 44;
     document.getElementById('lblAncho').textContent = configImpresion.ancho || 44;
     document.getElementById('sliderMargen').value = configImpresion.margen || 2;
@@ -702,15 +728,6 @@
     document.getElementById('selectFuente').value = configImpresion.fuente || 10;
     document.getElementById('selectCopias').value = configImpresion.copias || 2;
     document.getElementById('selectCorte').value = configImpresion.corte ? 'true' : 'false';
-    
-    // General
-    document.getElementById('inputNombreNegocio').value = configGeneral.nombreNegocio || 'WingerMan';
-    document.getElementById('inputLimiteTurno').value = configGeneral.limiteTurno || 50;
-    document.getElementById('selectSonido').value = configGeneral.sonido ? 'true' : 'false';
-    document.getElementById('inputPieTicket').value = configGeneral.pieTicket || '¡Gracias por su compra!';
-    
-    // Actualizar título
-    document.querySelector('.header h1').textContent = '🧇 ' + (configGeneral.nombreNegocio || 'WingerMan');
     actualizarVistaPrevia();
   }
 
@@ -994,7 +1011,7 @@
   }
 
   // ================================================================
-  // GENERAR TEXTO COMANDA (CON MÁRGENES MEJORADOS)
+  // GENERAR TEXTO COMANDA
   // ================================================================
   function generarTextoComanda(ped, productosOrdenados) {
     const ahora = new Date();
@@ -1044,10 +1061,9 @@
     let texto = '';
     
     texto += '\n';
-    const nombreNegocio = configGeneral.nombreNegocio || 'WingerMan';
     
     texto += '='.repeat(ANCHO) + '\n';
-    texto += centrar(nombreNegocio) + '\n';
+    texto += centrar(NOMBRE_NEGOCIO) + '\n';
     texto += centrar('Comanda') + '\n';
     texto += '='.repeat(ANCHO) + '\n';
     texto += linea('Pedido #' + ped.numeroPedido + '   ' + hora) + '\n';
@@ -1077,7 +1093,6 @@
         });
       }
       
-      // Espacio entre productos: 1 línea completa para mejor legibilidad
       texto += '\n';
     });
 
@@ -1100,7 +1115,7 @@
   }
 
   // ================================================================
-  // VISTA PREVIA DE IMPRESIÓN
+  // VISTA PREVIA
   // ================================================================
   function actualizarVistaPrevia() {
     const preview = document.getElementById('vistaPrevia');
@@ -1208,8 +1223,7 @@
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
 
     let printEntries = [];
-    const nombreNegocio = configGeneral.nombreNegocio || 'WingerMan';
-    printEntries.push({ type: 0, content: nombreNegocio, bold: 1, align: 1, format: 1 });
+    printEntries.push({ type: 0, content: NOMBRE_NEGOCIO, bold: 1, align: 1, format: 1 });
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: 'Pedido #' + ped.numeroPedido + '  ' + hora, bold: 1, align: 0, format: 0 });
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
@@ -1273,13 +1287,11 @@
       const encoder = new TextEncoder();
       let textoCompleto = texto + '\n';
       
-      // Múltiples copias
       const copias = configImpresion.copias || 2;
       for (let c = 0; c < copias; c++) {
         if (c > 0) {
-          // Si hay corte entre copias
           if (configImpresion.corte) {
-            textoCompleto += '\x1B\x69'; // Comando de corte
+            textoCompleto += '\x1B\x69';
           }
           textoCompleto += '\n\n';
         }
@@ -1466,10 +1478,9 @@
     }
     const total = pedidoActual.reduce((sum, p) => sum + p.precio, 0);
     const fecha = new Date().toLocaleString();
-    const nombreNegocio = configGeneral.nombreNegocio || 'WingerMan';
-    let contenido = `<h1 style="text-align:center;">🧇 ${nombreNegocio}</h1><p style="text-align:center;">${fecha}</p><hr><ul>`;
+    let contenido = `<h1 style="text-align:center;">🧇 ${NOMBRE_NEGOCIO}</h1><p style="text-align:center;">${fecha}</p><hr><ul>`;
     pedidoActual.forEach(p => { contenido += `<li>${p.nombre} - $${p.precio}</li>`; });
-    contenido += `</ul><hr><p><strong>Total: $${total.toFixed(2)}</strong></p><p style="text-align:center; margin-top:20px;">${configGeneral.pieTicket || '¡Gracias por su compra!'}</p>`;
+    contenido += `</ul><hr><p><strong>Total: $${total.toFixed(2)}</strong></p><p style="text-align:center; margin-top:20px;">${PIE_TICKET}</p>`;
     const ventana = window.open('', '_blank');
     ventana.document.write(`<html><head><title>Ticket</title><style>body{font-family:sans-serif;padding:20px;max-width:300px;margin:auto;} hr{margin:10px 0;} li{list-style:none;}</style></head><body>${contenido}</body></html>`);
     ventana.document.close();
@@ -1511,7 +1522,7 @@
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(data);
     XLSX.utils.book_append_sheet(wb, ws, 'Entregados');
-    XLSX.writeFile(wb, `${configGeneral.nombreNegocio || 'WingerMan'}_Entregados_Turno${turnoActual}.xlsx`);
+    XLSX.writeFile(wb, `${NOMBRE_NEGOCIO}_Entregados_Turno${turnoActual}.xlsx`);
   });
 
   btnCerrar.addEventListener('click', async () => {
@@ -1802,7 +1813,6 @@
       container.appendChild(catDiv);
     });
     
-    // Eventos de edición y eliminación
     document.querySelectorAll('#listaProductosConfig .btn-editar').forEach(btn => {
       btn.addEventListener('click', () => {
         const catIdx = parseInt(btn.dataset.cat);
@@ -1945,19 +1955,6 @@
 
   document.getElementById('btnGuardarImpresion').addEventListener('click', () => {
     guardarConfiguracion('impresion', configImpresion);
-  });
-
-  // ================================================================
-  // CONFIGURACIÓN - GENERAL
-  // ================================================================
-  document.getElementById('btnGuardarGeneral').addEventListener('click', () => {
-    configGeneral.nombreNegocio = document.getElementById('inputNombreNegocio').value.trim() || 'WingerMan';
-    configGeneral.limiteTurno = parseInt(document.getElementById('inputLimiteTurno').value) || 50;
-    configGeneral.sonido = document.getElementById('selectSonido').value === 'true';
-    configGeneral.pieTicket = document.getElementById('inputPieTicket').value.trim() || '¡Gracias por su compra!';
-    guardarConfiguracion('general', configGeneral);
-    document.querySelector('.header h1').textContent = '🧇 ' + configGeneral.nombreNegocio;
-    actualizarVistaPrevia();
   });
 
   // ================================================================
