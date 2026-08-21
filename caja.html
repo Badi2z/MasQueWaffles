@@ -240,7 +240,6 @@
     .config-panel .producto-item .btn-editar { background: #2196f3; color: white; border: none; padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; }
     .config-panel .producto-item .btn-editar:active { transform: scale(0.95); }
     .config-panel .grupo-item { padding-left: 16px; border-left: 3px solid #da291c; margin-bottom: 8px; }
-    /* Footer */
     .footer {
       margin-top: 30px;
       padding: 16px 20px;
@@ -326,10 +325,8 @@
       <input type="range" id="sliderMargen" min="0" max="5" step="0.5" value="2">
       <label>Tamaño de fuente:</label>
       <select id="selectFuente"><option value="9">9pt</option><option value="10" selected>10pt</option><option value="11">11pt</option><option value="12">12pt</option></select>
-      <label>Número de copias:</label>
-      <select id="selectCopias"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select>
-      <label>Corte entre copias:</label>
-      <select id="selectCorte"><option value="true">✅ Sí</option><option value="false">❌ No</option></select>
+      <label>Margen de corte (líneas en blanco después de la comanda): <span id="lblMargenCorte">2</span></label>
+      <input type="range" id="sliderMargenCorte" min="0" max="8" step="1" value="2">
       <label>Vista previa:</label>
       <div class="preview-box" id="vistaPrevia">Ajusta los parámetros para ver la vista previa...</div>
       <button class="btn-guardar" id="btnGuardarImpresion">💾 Guardar configuración de impresión</button>
@@ -397,22 +394,16 @@
   const auth = getAuth(app);
 
   // ================================================================
-  // CONFIGURACIÓN POR DEFECTO (FIJA - NO EDITABLE POR INTERFAZ)
+  // CONFIGURACIÓN POR DEFECTO
   // ================================================================
   const NOMBRE_NEGOCIO = 'WingerMan';
   const LIMITE_TURNO = 50;
   const PIE_TICKET = '¡Gracias por su compra!';
 
-  let configImpresion = { ancho: 44, margen: 2, fuente: 10, copias: 2, corte: true };
-  let configGeneral = { 
-    nombreNegocio: NOMBRE_NEGOCIO, 
-    limiteTurno: LIMITE_TURNO, 
-    sonido: true, 
-    pieTicket: PIE_TICKET 
-  };
+  let configImpresion = { ancho: 44, margen: 2, fuente: 10, margenCorte: 2 };
 
   // ================================================================
-  // FUNCIÓN PARA LIMPIAR CARACTERES ESPECIALES
+  // FUNCIÓN PARA LIMPIAR CARACTERES ESPECIALES (MEJORADA)
   // ================================================================
   function limpiarTexto(texto) {
     if (!texto) return '';
@@ -429,7 +420,8 @@
     for (let [original, reemplazo] of Object.entries(mapa)) {
       limpio = limpio.replace(new RegExp(original, 'g'), reemplazo);
     }
-    limpio = limpio.replace(/[^a-zA-Z0-9\s\-+]/g, '');
+    // IMPORTANTE: NO eliminar la 'l' minúscula, solo caracteres no permitidos
+    limpio = limpio.replace(/[^a-zA-Z0-9\s\-+.]/g, '');
     limpio = limpio.replace(/\s+/g, ' ');
     return limpio.trim();
   }
@@ -685,7 +677,7 @@
   }
 
   // ================================================================
-  // CARGAR CONFIGURACIÓN DESDE FIREBASE (SOLO IMPRESIÓN)
+  // CARGAR CONFIGURACIÓN
   // ================================================================
   async function cargarConfiguracion() {
     try {
@@ -726,8 +718,8 @@
     document.getElementById('sliderMargen').value = configImpresion.margen || 2;
     document.getElementById('lblMargen').textContent = configImpresion.margen || 2;
     document.getElementById('selectFuente').value = configImpresion.fuente || 10;
-    document.getElementById('selectCopias').value = configImpresion.copias || 2;
-    document.getElementById('selectCorte').value = configImpresion.corte ? 'true' : 'false';
+    document.getElementById('sliderMargenCorte').value = configImpresion.margenCorte || 2;
+    document.getElementById('lblMargenCorte').textContent = configImpresion.margenCorte || 2;
     actualizarVistaPrevia();
   }
 
@@ -1011,7 +1003,7 @@
   }
 
   // ================================================================
-  // GENERAR TEXTO COMANDA
+  // GENERAR TEXTO COMANDA (1 COPIA + MARGEN DE CORTE)
   // ================================================================
   function generarTextoComanda(ped, productosOrdenados) {
     const ahora = new Date();
@@ -1020,6 +1012,7 @@
 
     const ANCHO = configImpresion.ancho || 44;
     const margenChars = Math.round((configImpresion.margen || 2) * 0.25);
+    const margenCorte = configImpresion.margenCorte || 2;
     
     function centrar(t) {
       const espacios = Math.max(0, Math.floor((ANCHO - t.length) / 2));
@@ -1060,6 +1053,7 @@
 
     let texto = '';
     
+    // Margen superior: 1 línea
     texto += '\n';
     
     texto += '='.repeat(ANCHO) + '\n';
@@ -1093,6 +1087,7 @@
         });
       }
       
+      // Espacio entre productos: 1 línea
       texto += '\n';
     });
 
@@ -1109,7 +1104,8 @@
     texto += centrar(fecha) + '\n';
     texto += '='.repeat(ANCHO) + '\n';
     
-    texto += '\n';
+    // Margen de corte (líneas en blanco después de la comanda)
+    texto += '\n'.repeat(margenCorte + 1);
 
     return texto;
   }
@@ -1134,7 +1130,7 @@
   }
 
   // ================================================================
-  // IMPRESIÓN BLUETOOTH
+  // IMPRESIÓN (1 SOLA COPIA)
   // ================================================================
   async function conectarBluetooth() {
     try {
@@ -1221,6 +1217,7 @@
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const margenCorte = configImpresion.margenCorte || 2;
 
     let printEntries = [];
     printEntries.push({ type: 0, content: NOMBRE_NEGOCIO, bold: 1, align: 1, format: 1 });
@@ -1247,7 +1244,11 @@
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: 'Total: $' + ped.total.toFixed(2), bold: 1, align: 1, format: 1 });
     printEntries.push({ type: 0, content: fecha, bold: 0, align: 1, format: 0 });
-    printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
+    
+    // Margen de corte
+    for (let i = 0; i < margenCorte + 1; i++) {
+      printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
+    }
 
     const jsonData = JSON.stringify(printEntries);
     const encodedData = encodeURIComponent(jsonData);
@@ -1285,18 +1286,8 @@
       }
 
       const encoder = new TextEncoder();
-      let textoCompleto = texto + '\n';
-      
-      const copias = configImpresion.copias || 2;
-      for (let c = 0; c < copias; c++) {
-        if (c > 0) {
-          if (configImpresion.corte) {
-            textoCompleto += '\x1B\x69';
-          }
-          textoCompleto += '\n\n';
-        }
-        textoCompleto += texto + '\n';
-      }
+      // Solo 1 copia
+      const textoCompleto = texto;
       
       const chunkSize = 200;
       for (let i = 0; i < textoCompleto.length; i += chunkSize) {
@@ -1945,12 +1936,10 @@
     actualizarVistaPrevia();
   });
 
-  document.getElementById('selectCopias').addEventListener('change', (e) => {
-    configImpresion.copias = parseInt(e.target.value);
-  });
-
-  document.getElementById('selectCorte').addEventListener('change', (e) => {
-    configImpresion.corte = e.target.value === 'true';
+  document.getElementById('sliderMargenCorte').addEventListener('input', (e) => {
+    document.getElementById('lblMargenCorte').textContent = e.target.value;
+    configImpresion.margenCorte = parseInt(e.target.value);
+    actualizarVistaPrevia();
   });
 
   document.getElementById('btnGuardarImpresion').addEventListener('click', () => {

@@ -123,7 +123,6 @@
     .modal .opcion.pc { border-color: #2196f3; }
     .modal .opcion.ios { border-color: #0084FF; }
     .modal .opcion.android { border-color: #4caf50; }
-    /* Footer */
     .footer {
       margin-top: 30px;
       padding: 16px 20px;
@@ -177,9 +176,6 @@
   </div>
 </div>
 
-<!-- ============================================================ -->
-<!-- FOOTER - DERECHOS RESERVADOS -->
-<!-- ============================================================ -->
 <div class="footer">
   <div>
     <span class="prop">WingerMan</span> &copy; 2026 - Todos los derechos reservados.
@@ -213,11 +209,8 @@
   const db = getFirestore(app);
   const auth = getAuth(app);
 
-  // ================================================================
-  // CONFIGURACIÓN FIJA
-  // ================================================================
   const NOMBRE_NEGOCIO = 'WingerMan';
-  let configImpresion = { ancho: 44, margen: 2, fuente: 10, copias: 2, corte: true };
+  let configImpresion = { ancho: 44, margen: 2, fuente: 10, margenCorte: 2 };
   let configGeneral = { nombreNegocio: NOMBRE_NEGOCIO, limiteTurno: 50, sonido: true, pieTicket: '¡Gracias por su compra!' };
 
   function limpiarTexto(texto) {
@@ -235,7 +228,7 @@
     for (let [original, reemplazo] of Object.entries(mapa)) {
       limpio = limpio.replace(new RegExp(original, 'g'), reemplazo);
     }
-    limpio = limpio.replace(/[^a-zA-Z0-9\s\-+]/g, '');
+    limpio = limpio.replace(/[^a-zA-Z0-9\s\-+.]/g, '');
     limpio = limpio.replace(/\s+/g, ' ');
     return limpio.trim();
   }
@@ -355,6 +348,7 @@
 
     const ANCHO = configImpresion.ancho || 44;
     const margenChars = Math.round((configImpresion.margen || 2) * 0.25);
+    const margenCorte = configImpresion.margenCorte || 2;
     
     function centrar(t) {
       const espacios = Math.max(0, Math.floor((ANCHO - t.length) / 2));
@@ -444,7 +438,7 @@
     texto += centrar(fecha) + '\n';
     texto += '='.repeat(ANCHO) + '\n';
     
-    texto += '\n';
+    texto += '\n'.repeat(margenCorte + 1);
 
     return texto;
   }
@@ -534,6 +528,7 @@
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
     const hora = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const margenCorte = configImpresion.margenCorte || 2;
 
     let printEntries = [];
     printEntries.push({ type: 0, content: NOMBRE_NEGOCIO, bold: 1, align: 1, format: 1 });
@@ -560,7 +555,10 @@
     printEntries.push({ type: 0, content: '----------------------------', bold: 0, align: 0, format: 0 });
     printEntries.push({ type: 0, content: 'Total: $' + ped.total.toFixed(2), bold: 1, align: 1, format: 1 });
     printEntries.push({ type: 0, content: fecha, bold: 0, align: 1, format: 0 });
-    printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
+    
+    for (let i = 0; i < margenCorte + 1; i++) {
+      printEntries.push({ type: 0, content: '', bold: 0, align: 0, format: 0 });
+    }
 
     const jsonData = JSON.stringify(printEntries);
     const encodedData = encodeURIComponent(jsonData);
@@ -598,18 +596,7 @@
       }
 
       const encoder = new TextEncoder();
-      let textoCompleto = texto + '\n';
-      
-      const copias = configImpresion.copias || 2;
-      for (let c = 0; c < copias; c++) {
-        if (c > 0) {
-          if (configImpresion.corte) {
-            textoCompleto += '\x1B\x69';
-          }
-          textoCompleto += '\n\n';
-        }
-        textoCompleto += texto + '\n';
-      }
+      const textoCompleto = texto;
       
       const chunkSize = 200;
       for (let i = 0; i < textoCompleto.length; i += chunkSize) {
